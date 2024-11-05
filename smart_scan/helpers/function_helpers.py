@@ -10,10 +10,9 @@ from enum import IntEnum
 class ScanningStragies(IntEnum):
     RASTER = 0
     SNAKE = 1
-    
 
 
-def mask2active_pixels(mask: np.ndarray, scan_strategy : ScanningStragies = ScanningStragies.RASTER) -> None:
+def mask2active_pixels(mask: np.ndarray, scan_strategy : ScanningStragies = ScanningStragies.RASTER) -> np.ndarray:
     """Coverts a binary mask into a sequence of pixels for which the mask is true.
 
     Arguments:
@@ -421,7 +420,7 @@ def output_voltages(data_x, data_y, rate):
     dwf.FDwfDeviceClose(hdwf)
 
 
-def pixel2voltage(pixel_sequence, m_w: float, m_h: float, a_w: float, a_h: float):
+def pixels2voltages(pixel_sequence: np.ndarray, m_w: float, m_h: float, a_w: float, a_h: float) -> np.ndarray:
     """
     Converts pixel coordinates to voltages, assuming a linear relation.
     Voltage = m * pixel_coordinate + a
