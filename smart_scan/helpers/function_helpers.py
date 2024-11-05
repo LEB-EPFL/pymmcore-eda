@@ -2,9 +2,8 @@ import numpy as np
 import ctypes
 from ctypes import *
 import sys
-from  dependencies.dwfconstants import *
+from smart_scan.dependencies.dwfconstants import *
 from enum import IntEnum
-
 
 
 class ScanningStragies(IntEnum):
@@ -12,7 +11,9 @@ class ScanningStragies(IntEnum):
     SNAKE = 1
 
 
-def mask2active_pixels(mask: np.ndarray, scan_strategy : ScanningStragies = ScanningStragies.RASTER) -> np.ndarray:
+def mask2active_pixels(
+    mask: np.ndarray, scan_strategy: ScanningStragies = ScanningStragies.RASTER
+) -> np.ndarray:
     """Coverts a binary mask into a sequence of pixels for which the mask is true.
 
     Arguments:
@@ -20,26 +21,25 @@ def mask2active_pixels(mask: np.ndarray, scan_strategy : ScanningStragies = Scan
     """
     if scan_strategy == ScanningStragies.RASTER:
         active_pixels = np.transpose(np.nonzero(mask))
-    
+
     elif scan_strategy == ScanningStragies.SNAKE:
-        
+
         # generate 2 semi-masks with odd and even lines
         semi_mask_1 = np.zeros(mask.shape)
         semi_mask_2 = np.zeros(mask.shape)
-        semi_mask_1[::2,:] = mask[::2,:]
-        semi_mask_2[1::2,:] = mask[1::2,:]
-        
+        semi_mask_1[::2, :] = mask[::2, :]
+        semi_mask_2[1::2, :] = mask[1::2, :]
+
         pix_1 = np.transpose(np.nonzero(semi_mask_1))
         pix_2 = np.transpose(np.nonzero(semi_mask_2))
-        
+
         # invert all lines of semi mask 1
-        pix_1 = pix_1[np.lexsort((-pix_1[:,1],pix_1[:,0]))]
-        
+        pix_1 = pix_1[np.lexsort((-pix_1[:, 1], pix_1[:, 0]))]
+
         # concatenate the pixels and sort stably
-        active_pixels = np.concatenate((pix_1,pix_2),axis=0)
-        active_pixels = active_pixels[active_pixels[:,0].argsort( kind='stable')]
-        
-        
+        active_pixels = np.concatenate((pix_1, pix_2), axis=0)
+        active_pixels = active_pixels[active_pixels[:, 0].argsort(kind="stable")]
+
     return active_pixels
 
 
@@ -63,6 +63,7 @@ def generate_mask(h: int, w: int, semidim_h: int, semidim_w: int) -> np.ndarray:
     )
 
     return mask
+
 
 def output_voltage_triggered(data_x, rate):
     """
@@ -133,18 +134,17 @@ def output_voltage_triggered(data_x, rate):
     dwf.FDwfAnalogOutNodeFrequencySet(hdwf, channel_x, 0, c_double(rate))
     dwf.FDwfAnalogOutNodeAmplitudeSet(hdwf, channel_x, 0, c_double(1))
 
-    #set up trigger
-    dwf.FDwfAnalogInTriggerAutoTimeoutSet(hdwf, c_double(0)) #disable auto trigger
-    dwf.FDwfAnalogInTriggerSourceSet(hdwf, trigsrcDetectorAnalogIn) #one of the analog in channels
+    # set up trigger
+    dwf.FDwfAnalogInTriggerAutoTimeoutSet(hdwf, c_double(0))  # disable auto trigger
+    dwf.FDwfAnalogInTriggerSourceSet(
+        hdwf, trigsrcDetectorAnalogIn
+    )  # one of the analog in channels
     dwf.FDwfAnalogInTriggerTypeSet(hdwf, trigtypeEdge)
-    dwf.FDwfAnalogInTriggerChannelSet(hdwf, c_int(0)) # first channel
-    dwf.FDwfAnalogInTriggerLevelSet(hdwf, c_double(0.0)) # 0.0V
-    dwf.FDwfAnalogInTriggerConditionSet(hdwf, DwfTriggerSlopeRise) 
+    dwf.FDwfAnalogInTriggerChannelSet(hdwf, c_int(0))  # first channel
+    dwf.FDwfAnalogInTriggerLevelSet(hdwf, c_double(0.0))  # 0.0V
+    dwf.FDwfAnalogInTriggerConditionSet(hdwf, DwfTriggerSlopeRise)
     # relative to middle of the buffer, with time base/2 T0 will be the first sample
-    dwf.FDwfAnalogInTriggerPositionSet(hdwf, c_double(0.5*len(data_x)/rate))
-
-
-
+    dwf.FDwfAnalogInTriggerPositionSet(hdwf, c_double(0.5 * len(data_x) / rate))
 
     # prime the buffers with the first chunk of data
     cBuffer_x = c_int(0)
@@ -154,11 +154,9 @@ def output_voltage_triggered(data_x, rate):
     if cBuffer_x.value > data_x.size:
         cBuffer_x.value = data_x.size
 
-
     dwf.FDwfAnalogOutNodeDataSet(hdwf, channel_x, 0, data_c_x, cBuffer_x)
     iPlay_x += cBuffer_x.value
     dwf.FDwfAnalogOutConfigure(hdwf, channel_x, c_int(1))
-
 
     dataLost_x = c_int(0)
     dataFree_x = c_int(0)
@@ -169,7 +167,7 @@ def output_voltage_triggered(data_x, rate):
 
     while True:
         # fetch analog in info for the channel
-        if (dwf.FDwfAnalogOutStatus(hdwf, channel_x, byref(sts)) != 1):
+        if dwf.FDwfAnalogOutStatus(hdwf, channel_x, byref(sts)) != 1:
             print("Error")
             szerr = create_string_buffer(512)
             dwf.FDwfGetLastErrorMsg(szerr)
@@ -178,7 +176,6 @@ def output_voltage_triggered(data_x, rate):
 
         if sts.value != 3:
             break  # not running !DwfStateRunning
-
 
         dwf.FDwfAnalogOutNodePlayStatus(
             hdwf,
@@ -189,19 +186,17 @@ def output_voltage_triggered(data_x, rate):
             byref(dataCorrupted_x),
         )
 
-
         if (
             iPlay_x + dataFree_x.value > data_x.size
         ):  # last chunk might be less than the free buffer size
             dataFree_x.value = data_x.size - iPlay_x
-
 
         if (
             dwf.FDwfAnalogOutNodePlayData(
                 hdwf, channel_x, 0, byref(data_c_x, iPlay_x * 8), dataFree_x
             )
             != 1
-        ) :  # offset for double is *8 (bytes)
+        ):  # offset for double is *8 (bytes)
             print("Error")
             break
 
@@ -212,9 +207,6 @@ def output_voltage_triggered(data_x, rate):
 
     # Close the device
     dwf.FDwfDeviceClose(hdwf)
-
-
-
 
 
 def output_voltages(data_x, data_y, rate):
@@ -420,7 +412,9 @@ def output_voltages(data_x, data_y, rate):
     dwf.FDwfDeviceClose(hdwf)
 
 
-def pixels2voltages(pixel_sequence: np.ndarray, m_w: float, m_h: float, a_w: float, a_h: float) -> np.ndarray:
+def pixels2voltages(
+    pixel_sequence: np.ndarray, m_w: float, m_h: float, a_w: float, a_h: float
+) -> np.ndarray:
     """
     Converts pixel coordinates to voltages, assuming a linear relation.
     Voltage = m * pixel_coordinate + a
