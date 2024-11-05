@@ -2,15 +2,45 @@ import numpy as np
 import ctypes
 from ctypes import *
 import sys
+from  dependencies.dwfconstants import *
+from enum import IntEnum
 
 
-def mask2active_pixels(mask: np.ndarray) -> None:
+
+class ScanningStragies(IntEnum):
+    RASTER = 0
+    SNAKE = 1
+    
+
+
+def mask2active_pixels(mask: np.ndarray, scan_strategy : ScanningStragies = ScanningStragies.RASTER) -> None:
     """Coverts a binary mask into a sequence of pixels for which the mask is true.
 
     Arguments:
     mask -- the binary mask, we skip 0 pixels
     """
-    active_pixels = np.transpose(np.nonzero(mask))
+    if scan_strategy == ScanningStragies.RASTER:
+        active_pixels = np.transpose(np.nonzero(mask))
+    
+    elif scan_strategy == ScanningStragies.SNAKE:
+        
+        # generate 2 semi-masks with odd and even lines
+        semi_mask_1 = np.zeros(mask.shape)
+        semi_mask_2 = np.zeros(mask.shape)
+        semi_mask_1[::2,:] = mask[::2,:]
+        semi_mask_2[1::2,:] = mask[1::2,:]
+        
+        pix_1 = np.transpose(np.nonzero(semi_mask_1))
+        pix_2 = np.transpose(np.nonzero(semi_mask_2))
+        
+        # invert all lines of semi mask 1
+        pix_1 = pix_1[np.lexsort((-pix_1[:,1],pix_1[:,0]))]
+        
+        # concatenate the pixels and sort stably
+        active_pixels = np.concatenate((pix_1,pix_2),axis=0)
+        active_pixels = active_pixels[active_pixels[:,0].argsort( kind='stable')]
+        
+        
     return active_pixels
 
 
@@ -34,6 +64,158 @@ def generate_mask(h: int, w: int, semidim_h: int, semidim_w: int) -> np.ndarray:
     )
 
     return mask
+
+def output_voltage_triggered(data_x, rate):
+    """
+    Adapted from AnalogOut_Play.py
+    DWF Python Example
+    Author:  Digilent, Inc.
+    Revision:  2018-07-19
+
+    Requires:
+        Python 2.7, 3
+    """
+    # AnalogOut expects double normalized to +/-1 value
+    dataf_x = data_x.astype(np.float64)
+    if np.dtype(data_x[0]) == np.int8 or np.dtype(data_x[0]) == np.uint8:
+        print("Scaling: UINT8")
+        dataf_x /= 128.0
+        dataf_x -= 1.0
+    elif np.dtype(data_x[0]) == np.int16:
+        print("Scaling: INT16")
+        dataf_x /= 32768.0
+    elif np.dtype(data_x[0]) == np.int32:
+        print("Scaling: INT32")
+        dataf_x /= 2147483648.0
+
+    # prepare the data x
+    data_c_x = (ctypes.c_double * len(dataf_x))(*dataf_x)
+
+    # loads the dll
+    if sys.platform.startswith("win"):
+        dwf = cdll.dwf
+    elif sys.platform.startswith("darwin"):
+        dwf = cdll.LoadLibrary("/Library/Frameworks/dwf.framework/dwf")
+    else:
+        dwf = cdll.LoadLibrary("libdwf.so")
+
+    # declare ctype variables
+    hdwf = c_int()
+    channel_x = c_int(0)  # AWG 1
+
+    # DWF version
+    version = create_string_buffer(16)
+    dwf.FDwfGetVersion(version)
+
+    # trys to open device
+    dwf.FDwfDeviceOpen(c_int(-1), byref(hdwf))
+
+    if hdwf.value == 0:
+        print("Failed to open device")
+        szerr = create_string_buffer(512)
+        dwf.FDwfGetLastErrorMsg(szerr)
+        print(str(szerr.value))
+        quit()
+
+    # the device will only be configured when FDwf###Configure is called
+    dwf.FDwfDeviceAutoConfigureSet(hdwf, c_int(0))
+
+    iPlay_x = 0
+
+    sRun = 1.0 * data_x.size / rate
+
+    # Set the channel x ?
+    dwf.FDwfAnalogOutNodeEnableSet(hdwf, channel_x, 0, c_int(1))
+    dwf.FDwfAnalogOutNodeFunctionSet(hdwf, channel_x, 0, c_int(31))  # funcPlay
+    dwf.FDwfAnalogOutRepeatSet(hdwf, channel_x, c_int(1))
+    dwf.FDwfAnalogOutOffsetSet(hdwf, channel_x, c_double(0))
+
+    dwf.FDwfAnalogOutRunSet(hdwf, channel_x, c_double(sRun))
+    dwf.FDwfAnalogOutNodeFrequencySet(hdwf, channel_x, 0, c_double(rate))
+    dwf.FDwfAnalogOutNodeAmplitudeSet(hdwf, channel_x, 0, c_double(1))
+
+    #set up trigger
+    dwf.FDwfAnalogInTriggerAutoTimeoutSet(hdwf, c_double(0)) #disable auto trigger
+    dwf.FDwfAnalogInTriggerSourceSet(hdwf, trigsrcDetectorAnalogIn) #one of the analog in channels
+    dwf.FDwfAnalogInTriggerTypeSet(hdwf, trigtypeEdge)
+    dwf.FDwfAnalogInTriggerChannelSet(hdwf, c_int(0)) # first channel
+    dwf.FDwfAnalogInTriggerLevelSet(hdwf, c_double(0.0)) # 0.0V
+    dwf.FDwfAnalogInTriggerConditionSet(hdwf, DwfTriggerSlopeRise) 
+    # relative to middle of the buffer, with time base/2 T0 will be the first sample
+    dwf.FDwfAnalogInTriggerPositionSet(hdwf, c_double(0.5*len(data_x)/rate))
+
+
+
+
+    # prime the buffers with the first chunk of data
+    cBuffer_x = c_int(0)
+
+    dwf.FDwfAnalogOutNodeDataInfo(hdwf, channel_x, 0, 0, byref(cBuffer_x))
+
+    if cBuffer_x.value > data_x.size:
+        cBuffer_x.value = data_x.size
+
+
+    dwf.FDwfAnalogOutNodeDataSet(hdwf, channel_x, 0, data_c_x, cBuffer_x)
+    iPlay_x += cBuffer_x.value
+    dwf.FDwfAnalogOutConfigure(hdwf, channel_x, c_int(1))
+
+
+    dataLost_x = c_int(0)
+    dataFree_x = c_int(0)
+    dataCorrupted_x = c_int(0)
+    sts = c_ubyte(0)
+    totalLost = 0
+    totalCorrupted = 0
+
+    while True:
+        # fetch analog in info for the channel
+        if (dwf.FDwfAnalogOutStatus(hdwf, channel_x, byref(sts)) != 1):
+            print("Error")
+            szerr = create_string_buffer(512)
+            dwf.FDwfGetLastErrorMsg(szerr)
+            print(szerr.value)
+            break
+
+        if sts.value != 3:
+            break  # not running !DwfStateRunning
+
+
+        dwf.FDwfAnalogOutNodePlayStatus(
+            hdwf,
+            channel_x,
+            0,
+            byref(dataFree_x),
+            byref(dataLost_x),
+            byref(dataCorrupted_x),
+        )
+
+
+        if (
+            iPlay_x + dataFree_x.value > data_x.size
+        ):  # last chunk might be less than the free buffer size
+            dataFree_x.value = data_x.size - iPlay_x
+
+
+        if (
+            dwf.FDwfAnalogOutNodePlayData(
+                hdwf, channel_x, 0, byref(data_c_x, iPlay_x * 8), dataFree_x
+            )
+            != 1
+        ) :  # offset for double is *8 (bytes)
+            print("Error")
+            break
+
+        iPlay_x += dataFree_x.value
+
+    # Resets the outputs
+    dwf.FDwfAnalogOutReset(hdwf, channel_x)
+
+    # Close the device
+    dwf.FDwfDeviceClose(hdwf)
+
+
+
 
 
 def output_voltages(data_x, data_y, rate):
@@ -116,8 +298,8 @@ def output_voltages(data_x, data_y, rate):
     # Set the channel x ?
     dwf.FDwfAnalogOutNodeEnableSet(hdwf, channel_x, 0, c_int(1))
     dwf.FDwfAnalogOutNodeFunctionSet(hdwf, channel_x, 0, c_int(31))  # funcPlay
-    dwf.FDwfAnalogOutRepeatSet(hdwf, channel_x, c_int(5))
-    dwf.FDwfAnalogOutOffsetSet(hdwf, channel_x, c_double(2.5))
+    dwf.FDwfAnalogOutRepeatSet(hdwf, channel_x, c_int(1))
+    dwf.FDwfAnalogOutOffsetSet(hdwf, channel_x, c_double(0))
 
     dwf.FDwfAnalogOutRunSet(hdwf, channel_x, c_double(sRun))
     dwf.FDwfAnalogOutNodeFrequencySet(hdwf, channel_x, 0, c_double(rate))
@@ -126,8 +308,8 @@ def output_voltages(data_x, data_y, rate):
     # Set the channel Y ?
     dwf.FDwfAnalogOutNodeEnableSet(hdwf, channel_y, 0, c_int(1))
     dwf.FDwfAnalogOutNodeFunctionSet(hdwf, channel_y, 0, c_int(31))  # funcPlay
-    dwf.FDwfAnalogOutRepeatSet(hdwf, channel_y, c_int(5))
-    dwf.FDwfAnalogOutOffsetSet(hdwf, channel_y, c_double(1.0))
+    dwf.FDwfAnalogOutRepeatSet(hdwf, channel_y, c_int(1))
+    dwf.FDwfAnalogOutOffsetSet(hdwf, channel_y, c_double(0))
 
     dwf.FDwfAnalogOutRunSet(hdwf, channel_y, c_double(sRun))
     dwf.FDwfAnalogOutNodeFrequencySet(hdwf, channel_y, 0, c_double(rate))
