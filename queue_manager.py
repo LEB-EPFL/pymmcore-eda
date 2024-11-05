@@ -2,13 +2,17 @@
 from queue import Queue
 
 from time_machine import TimeMachine
-
+from threading import Timer
 
 class QueueManager():
-    def __init__(self, queue: Queue | None, time_machine: TimeMachine):
-        self.queue = queue or Queue()
+    def __init__(self, time_machine: TimeMachine):
+        self.q = Queue()                    # create the queue
+        self.stop = object()                # any object can serve as the sentinel
+        self.q_iterator = iter(self.q.get, self.stop)  # create the queue-backed iterable
         self.time_machine = time_machine
         self.event_register = {}
+        self.preemptive = 0.01
+        self.t_idx = 0
         # self.axis_order = 'tpgcz' we might need this
 
     def register_actuator(self, actuator):
@@ -17,10 +21,35 @@ class QueueManager():
 
     def register_event(self, event):
         if not event.min_start_time in self.event_register.keys():
-            self.event_register[event.min_start_time] = []
+            self.event_register[event.min_start_time] = {'timer': None, 'events': []}
 
         # Now consider where this event should go. z stack before channel or after for example?
-        self.event_register[event.min_start_time].append(event)
+        self.event_register[event.min_start_time]['events'].append(event)
+
+        if self.event_register[event.min_start_time]['timer'] is None:
+            time_until_start = event.min_start_time - self.time_machine.event_seconds_elapsed() - self.preemptive
+            time_until_start = max(0, time_until_start)
+            self.event_register[event.min_start_time]['timer'] = Timer(time_until_start, 
+                                                                       self.queue_events,
+                                                                       args=[event.min_start_time])
+            self.event_register[event.min_start_time]['timer'].start()
+        # print(self.event_register[event.min_start_time]) 
+
+    def queue_events(self, start_time: float):
+        events = self.event_register[start_time]['events'].copy()
+        events = sorted(events, key= lambda event:(event.index.get('c', 100)))
+        for event in events:
+            new_index = event.index.copy()
+            new_index['t'] = self.t_idx
+            event = event.replace(index=new_index)
+            self.q.put(event)
+        self.t_idx += 1 
+        # pop the events from the register
+
+    def stop_seq(self):
+        self.q.put(self.stop)
+
+
 
 if __name__ == "__main__":
     from useq import MDASequence, MDAEvent

@@ -5,9 +5,16 @@ graph TD;
     Engine
     Runner
     Queue
-    Actuator
+    BaseActuator
+    SmartActuator
+    QueueManager
+    TimeMachine
 
-    Actuator -- MDAevent --> Queue
+    BaseActuator --> QueueManager
+    SmartActuator --> QueueManager
+    QueueManager -- MDAevent --> Queue
+    QueueManager -- MDAEvent -->TimeMachine
+    TimeMachine -- EventTime --> QueueManager
     Queue --> Runner
     Runner -- MDAEvent --> Engine
     Engine -- Image --> Runner
