@@ -3,13 +3,15 @@ from queue import Queue
 
 from time_machine import TimeMachine
 from threading import Timer
+from useq import MDAEvent
+import time
 
 class QueueManager():
-    def __init__(self, time_machine: TimeMachine):
+    def __init__(self, time_machine: TimeMachine | None = None):
         self.q = Queue()                    # create the queue
         self.stop = object()                # any object can serve as the sentinel
         self.q_iterator = iter(self.q.get, self.stop)  # create the queue-backed iterable
-        self.time_machine = time_machine
+        self.time_machine = time_machine or TimeMachine()
         self.event_register = {}
         self.preemptive = 0.01
         self.t_idx = 0
@@ -23,17 +25,9 @@ class QueueManager():
         if not event.min_start_time in self.event_register.keys():
             self.event_register[event.min_start_time] = {'timer': None, 'events': []}
 
-        # Now consider where this event should go. z stack before channel or after for example?
         self.event_register[event.min_start_time]['events'].append(event)
-
         if self.event_register[event.min_start_time]['timer'] is None:
-            time_until_start = event.min_start_time - self.time_machine.event_seconds_elapsed() - self.preemptive
-            time_until_start = max(0, time_until_start)
-            self.event_register[event.min_start_time]['timer'] = Timer(time_until_start, 
-                                                                       self.queue_events,
-                                                                       args=[event.min_start_time])
-            self.event_register[event.min_start_time]['timer'].start()
-        # print(self.event_register[event.min_start_time]) 
+            self._set_timer_for_event(event)
 
     def queue_events(self, start_time: float):
         events = self.event_register[start_time]['events'].copy()
@@ -43,12 +37,27 @@ class QueueManager():
             new_index['t'] = self.t_idx
             event = event.replace(index=new_index)
             self.q.put(event)
-        self.t_idx += 1 
-        # pop the events from the register
+        time.sleep(self.preemptive)
+        for event in events:
+            self.time_machine.consume_event(event)
+        self.t_idx += 1
+        del self.event_register[start_time]
 
     def stop_seq(self):
         self.q.put(self.stop)
-
+    
+    def _set_timer_for_event(self, event: MDAEvent):
+        if self.event_register[event.min_start_time]['timer']:
+            self.event_register[event.min_start_time]['timer'].cancel()
+        if event.min_start_time:
+            time_until_start = event.min_start_time - self.time_machine.event_seconds_elapsed() - self.preemptive
+        else:
+            time_until_start = -1
+        time_until_start = max(0, time_until_start)
+        self.event_register[event.min_start_time]['timer'] = Timer(time_until_start, 
+                                                                       self.queue_events,
+                                                                       args=[event.min_start_time])
+        self.event_register[event.min_start_time]['timer'].start()
 
 
 if __name__ == "__main__":
