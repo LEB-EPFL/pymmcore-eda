@@ -24,30 +24,70 @@ graph TD;
 
 # Actuator Queue interaction
 ```mermaid
-graph TD;
+graph TB;
     BaseActuator
     SmartActuator
     EventRegister
-    ```mermaid
-    subgraph EventRegister
-        min_start_time_0.0 --- Timer
-        min_start_time_0.0 --> Events
-        2.0 --- Timer1(Timer)
-        2.0 --> Events1(Events)
-        3.0 --- Timer3(Timer)
-        3.0 --> Events3(Events)
-        4.0 --- Timer2(Timer)
-        4.0 --> Events2(Events)
+    subgraph TimeMachine
+        direction TB
+        Event -- if_reset_event_timer --> t0
     end
-    ```
-    QueueManager
 
-    BaseActuator -- MDAEvent --> QueueManager
-    QueueManager -- MDAEvent<br>min_start_time --> EventRegister
+    QueueManager -- Events --> TimeMachine
+    
+    TimeMachine -- reset_Timers --> EventRegister
+
+    subgraph EventRegister
+        0.0 --- 2.0
+        2.0 --- 3.0
+        3.0---4.0
+        
+        subgraph 0.0
+            Timer
+            Events
+
+        end
+        subgraph 2.0
+            Timer2(Timer)
+            Events2(Events)
+        end
+        subgraph 3.0
+            Timer3(Timer)
+            Events3(Events)
+        end        
+        subgraph 4.0
+            Timer4(Timer)
+            Events4(Events)
+        end
+
+    end
+
+    QueueManager
+    Queue
+
+style X fill:transparent,stroke-width:0;
+    BaseActuator -- MDAEvents --> QueueManager
+    QueueManager -- MDAEvent<br>min_start_time_0.0 --> 0.0
 
     SmartActuator -- smartMDAEvent --> QueueManager
+
     QueueManager -- smartMDAEvent<br>min_start_time_-1 --> Events2
-    QueueManager -- smartMDAEvent<br>min_start_time_3.0 --> 3.0
+    QueueManager -- smartMDAEvent<br>min_start_time_3.0 --> Events3
+
+
+    Timer4 -- triggers --- X( ):::empty
+    style X fill:transparent,stroke-width:0; 
+    classDef empty width:0px,height:0px;
+    Events4 --- X
+    X --> Queue
+
+    QueueManager --- Queue
+
+    subgraph pymmcore-plus
+        Runner
+    end
+    Queue --- Runner
+
 ```
 
 
