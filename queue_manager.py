@@ -5,6 +5,7 @@ from time_machine import TimeMachine
 from threading import Timer
 from useq import MDAEvent
 import time
+from pymmcore_plus._logger import logger
 
 class QueueManager():
     def __init__(self, time_machine: TimeMachine | None = None):
@@ -13,7 +14,7 @@ class QueueManager():
         self.q_iterator = iter(self.q.get, self.stop)  # create the queue-backed iterable
         self.time_machine = time_machine or TimeMachine()
         self.event_register = {}
-        self.preemptive = 0.01
+        self.preemptive = 0.02
         self.t_idx = 0
         # self.axis_order = 'tpgcz' we might need this
 
@@ -22,9 +23,11 @@ class QueueManager():
         pass
 
     def register_event(self, event):
+        if event.min_start_time == -1:
+            event = event.replace(min_start_time= min(self.event_register.keys()))
         if not event.min_start_time in self.event_register.keys():
             self.event_register[event.min_start_time] = {'timer': None, 'events': []}
-
+        
         self.event_register[event.min_start_time]['events'].append(event)
         if self.event_register[event.min_start_time]['timer'] is None:
             self._set_timer_for_event(event)
@@ -32,14 +35,22 @@ class QueueManager():
     def queue_events(self, start_time: float):
         events = self.event_register[start_time]['events'].copy()
         events = sorted(events, key= lambda event:(event.index.get('c', 100)))
-        for event in events:
+        # logger.info(f"Queueing events: {self.time_machine.event_seconds_elapsed()}")
+        for idx, event in enumerate(events):
             new_index = event.index.copy()
             new_index['t'] = self.t_idx
             event = event.replace(index=new_index)
             self.q.put(event)
-        time.sleep(self.preemptive)
-        for event in events:
-            self.time_machine.consume_event(event)
+        
+            if event.reset_event_timer and idx == 0: # if not idx == 0 gets more complicated
+                self.time_machine.consume_event(event)
+                old_items = list(self.event_register.items())
+                for key, value in old_items:
+                    if key == start_time:
+                        continue
+                    self._set_timer_for_event(value['events'][0])
+
+        
         self.t_idx += 1
         del self.event_register[start_time]
 
