@@ -2,13 +2,21 @@
 
 ```mermaid
 graph TD;
-    Engine
-    Runner
+      
+    subgraph pymmcore-eda
+        BaseActuator
+        SmartActuator
+        QueueManager
+        TimeMachine
+        Analyser
+        Interpreter
+    end
+    subgraph pymmcore-plus
+        Engine
+        Runner
+    end
     Queue
-    BaseActuator
-    SmartActuator
-    QueueManager
-    TimeMachine
+
 
     BaseActuator --> QueueManager
     SmartActuator --> QueueManager
@@ -19,6 +27,9 @@ graph TD;
     Runner -- MDAEvent --> Engine
     Engine -- Image --> Runner
     Runner --> Image
+    Image --> Analyser
+    Analyser --> Interpreter
+    Interpreter --> SmartActuator
 ```
 
 
