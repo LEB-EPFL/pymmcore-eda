@@ -4,7 +4,7 @@ from threading import Thread
 import time
 from pymmcore_plus._logger import logger
 from queue_manager import QueueManager
-
+from event_hub import EventHub
 
 
 
@@ -74,6 +74,19 @@ class ButtonActuator():
             logger.info(f"Button {button} pressed, event sent to queue manager")
 
 
+class SmartActuator():
+    """Actuator that sends events to the queue manager when a button is pressed"""
+    def __init__(self, queue_manager: QueueManager, hub: EventHub):
+        self.queue_manager = queue_manager
+        self.hub = hub
+        self.hub.new_interpretation.connect(self.act)
+
+    def act(self, max_val, event, metadata):
+       if event.index.get('t', 0)%2 == 0:
+           event = MDAEvent(index={"t": 0, "c": 2}, min_start_time=-1)
+           self.queue_manager.register_event(event)
+           logger.info(f"Actuator sent event {event.index} to queue manager")
+
 if __name__ == "__main__":
     from pymmcore_plus import CMMCorePlus
     from queue_manager import QueueManager
@@ -93,12 +106,22 @@ if __name__ == "__main__":
     d_actuator = DumbActuator(queue_manager)
     b_actuator = ButtonActuator(queue_manager)
 
-    # start the acquisition in a separate thread
+    # start the acquisition in a separate thread -- base+dumb:
     mda_thread = mmc.run_mda(queue_manager.q_iterator)
     time.sleep(1)
     actuator.thread.start()
-    b_actuator.thread.start()
+    d_actuator.thread.start()
     actuator.thread.join()
     time.sleep(30)
     queue_manager.stop_seq()
     mda_thread.join()
+
+    # start the acquisition in a separate thread -- base+button:
+    # mda_thread = mmc.run_mda(queue_manager.q_iterator)
+    # time.sleep(1)
+    # actuator.thread.start()
+    # b_actuator.thread.start()
+    # actuator.thread.join()
+    # time.sleep(30)
+    # queue_manager.stop_seq()
+    # mda_thread.join()
