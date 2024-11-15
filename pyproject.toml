@@ -38,3 +38,41 @@ Documentation = "https://LEB-EPFL.github.io/pymmcore-eda"
 [tool.pytest.ini_options]
 log_cli = true
 log_cli_level = "INFO"
+
+# https://beta.ruff.rs/docs/rules/
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.ruff.lint]
+pydocstyle = { convention = "numpy" }
+select = [
+    "E",    # style errors
+    "F",    # flakes
+    "W",    # warnings
+    "D",    # pydocstyle
+    "I",    # isort
+    "UP",   # pyupgrade
+    "C4",   # flake8-comprehensions
+    "B",    # flake8-bugbear
+    "A001", # flake8-builtins
+    "RUF",  # ruff-specific rules
+    "TID",  # tidy
+    "TCH",  # typecheck
+    "SLF",  # private-access
+]
+ignore = [
+    "D100", # Missing docstring in public module
+    "D104", # Missing docstring in public package
+    "D401", # First line should be in imperative mood (remove to opt in)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["D", "SLF"]
+"examples/*.py" = ["D"]
+"_cli.py" = ["B008"]
+"docs/*.py" = ["A", "D"]
+
+# https://docs.astral.sh/ruff/formatter/
+[tool.ruff.format]
+docstring-code-format = true

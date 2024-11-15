@@ -1,15 +1,18 @@
-from _runner import MockRunner
 import time
+
+from _runner import MockRunner
 
 
 def test_mda():
     from pymmcore_plus import CMMCorePlus
     from useq import MDASequence
-    from pymmcore_eda.queue_manager import QueueManager
+
     from pymmcore_eda.actuator import MDAActuator
+    from pymmcore_eda.queue_manager import QueueManager
     mmc = CMMCorePlus()
     mmc.setDeviceAdapterSearchPaths(
-        ["C:/Program Files/Micro-Manager-2.0/"] + list(mmc.getDeviceAdapterSearchPaths()))
+        ["C:/Program Files/Micro-Manager-2.0/",
+        *list(mmc.getDeviceAdapterSearchPaths())])
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False
 

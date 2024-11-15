@@ -1,7 +1,7 @@
 from threading import Thread
-from pymmcore_eda._logger import logger
 
-class MockRunner():
+
+class MockRunner:
     def __init__(self):
         self.events = []
 
@@ -13,8 +13,6 @@ class MockRunner():
         _events = self.event_iterator(events)
         for event in _events:
             self.events.append(event)
-            print(event.index['t'])
-        logger.info('mock runner done')
-    
+
     def event_iterator(self, events):
         yield from events
