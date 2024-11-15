@@ -49,14 +49,20 @@ graph TB;
     TimeMachine -- reset_Timers --> EventRegister
 
     subgraph EventRegister
-        0.0 --- 2.0
-        2.0 --- 3.0
-        3.0---4.0
+        0.0 -.- 2.0
+        0.0 -.- 1.0
+        1.0 -.- 2.0
+        2.0 -.- 3.0
+        3.0 -.- 4.0
         
         subgraph 0.0
             Timer
             Events
 
+        end
+        subgraph 1.0[1.0 add upon registration]
+            Events1(Events)
+            Timer1(Timer)
         end
         subgraph 2.0
             Timer2(Timer)
@@ -76,13 +82,13 @@ graph TB;
     QueueManager
     Queue
 
-style X fill:transparent,stroke-width:0;
     BaseActuator -- MDAEvents --> QueueManager
     QueueManager -- MDAEvent<br>min_start_time_0.0 --> 0.0
 
     SmartActuator -- smartMDAEvent --> QueueManager
 
-    QueueManager -- smartMDAEvent<br>min_start_time_-1 --> Events2
+    QueueManager -- smartMDAEvent<br>min_start_time_-1 --> 1.0
+    QueueManager -- smartMDAEvent<br>t_idx_-1 --> Events2
     QueueManager -- smartMDAEvent<br>min_start_time_3.0 --> Events3
 
 
