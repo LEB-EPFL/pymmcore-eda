@@ -6,6 +6,10 @@ if TYPE_CHECKING:
 
 
 class TimeMachine():
+    """Component to syncronize time between the Runner in pymmcore-plus and the QueueManager.
+    
+    This avoids having direct connections between the two components. Like this seems to be accurate enough (10ms).
+    """
     def __init__(self):
         self._t0 = time.perf_counter()
 

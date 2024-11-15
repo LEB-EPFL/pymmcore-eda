@@ -8,6 +8,10 @@ import time
 from pymmcore_plus._logger import logger
 
 class QueueManager():
+    """ Component responsible to manage events and their timing in front of the Queue.
+
+    Closer description in structure.md.
+    """
     def __init__(self, time_machine: TimeMachine | None = None):
         self.q = Queue()                    # create the queue
         self.stop = object()                # any object can serve as the sentinel
@@ -19,10 +23,11 @@ class QueueManager():
         # self.axis_order = 'tpgcz' we might need this
 
     def register_actuator(self, actuator):
-        "Actuator asks for its base indices for example which channel its allowed to push to"
+        """Actuator asks for its base indices for example which channel its allowed to push to"""
         pass
 
     def register_event(self, event):
+        "Actuators call this to request an event to be put on the event_register."
         if event.min_start_time == -1:
             event = event.replace(min_start_time= min(self.event_register.keys()))
         if not event.min_start_time in self.event_register.keys():
@@ -33,6 +38,7 @@ class QueueManager():
             self._set_timer_for_event(event)
 
     def queue_events(self, start_time: float):
+        """Just before the actual acquisition time, put the event on the queue that exposes them to the pymmcore-plus runner."""
         events = self.event_register[start_time]['events'].copy()
         events = sorted(events, key= lambda event:(event.index.get('c', 100)))
         # logger.info(f"Queueing events: {self.time_machine.event_seconds_elapsed()}")
@@ -42,6 +48,7 @@ class QueueManager():
             event = event.replace(index=new_index)
             self.q.put(event)
         
+            # If this event reset the event_timer in the Runner, we have to reset the time_machine and update the timers for all queued events.
             if event.reset_event_timer and idx == 0: # if not idx == 0 gets more complicated
                 self.time_machine.consume_event(event)
                 old_items = list(self.event_register.items())
@@ -58,6 +65,7 @@ class QueueManager():
         self.q.put(self.stop)
     
     def _set_timer_for_event(self, event: MDAEvent):
+        """Set or reset the timer for an event"""
         if self.event_register[event.min_start_time]['timer']:
             self.event_register[event.min_start_time]['timer'].cancel()
         if event.min_start_time:

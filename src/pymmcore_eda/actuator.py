@@ -7,30 +7,8 @@ from queue_manager import QueueManager
 from event_hub import EventHub
 
 
-
-class Actuator():
-    def __init__(self, queue: Queue, sentinel: object):
-        self.queue = queue
-        self.sentinel = sentinel
-
-        self.thread = Thread(target=self.run)
-        self.event = "dumb"
-
-    def run(self):
-        t = 0
-        t_max = 20
-        while t < t_max:
-            if self.queue.empty():
-                event = MDAEvent(index={"t": t, "c": 0}, min_start_time=t)
-                self.queue.put(event)
-                if t % 5 == 0:
-                    event = MDAEvent(channel=self.event, index={
-                                     "t": t, "c": 1}, min_start_time=t)
-                    self.queue.put(event)
-                t += 1
-        self.queue.put(self.sentinel)
-
-class BaseActuator():
+class MDAActuator():
+    """Takes a MDASequence and sends events to the queue manager""" 
     def __init__(self, queue_manager: QueueManager, mda_sequence: MDASequence):
         self.queue_manager = queue_manager
         self.mda_sequence = mda_sequence
@@ -40,22 +18,6 @@ class BaseActuator():
         for event in self.mda_sequence:
             self.queue_manager.register_event(event)
 
-class DumbActuator():
-    def __init__(self, queue_manager: QueueManager):
-        self.queue_manager = queue_manager
-        self.thread = Thread(target=self.run)
-        self.event = "dumb"
-
-    def run(self):
-        t_ind = 0
-        t = 0
-        t_max = 20
-        while t <= t_max:
-            if t % 5 == 0:
-                event = MDAEvent(index={"t": t_ind, "c": 1}, min_start_time=t)
-                self.queue_manager.register_event(event)
-                t_ind += 1
-            t += 2  
 
 class ButtonActuator():
     """Actuator that sends events to the queue manager when a button is pressed"""
@@ -75,7 +37,7 @@ class ButtonActuator():
 
 
 class SmartActuator():
-    """Actuator that sends events to the queue manager when a button is pressed"""
+    """Actuator that subscribes to new_interpretation and reacts to the incoming events."""
     def __init__(self, queue_manager: QueueManager, hub: EventHub):
         self.queue_manager = queue_manager
         self.hub = hub
@@ -86,6 +48,7 @@ class SmartActuator():
            event = MDAEvent(index={"t": 0, "c": 2}, min_start_time=-1)
            self.queue_manager.register_event(event)
            logger.info(f"Actuator sent event {event.index} to queue manager")
+
 
 if __name__ == "__main__":
     from pymmcore_plus import CMMCorePlus

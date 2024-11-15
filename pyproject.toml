@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pymmcore-eda"
+description = "Smart microscopy library based on pymmcore-plus"
+keywords = ["microscope", "micro-manager", "smart-microscopy"]
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "BSD 3-Clause License" }
+authors = [
+    { name = "Willi Stepp", email = "willi@stepp.one" },
+    { name = "Kasia Glinka"},
+    { name = "Giorgio Tortarolo"}
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Topic :: System :: Hardware",
+    "Topic :: Utilities",
+]
+dynamic = ["version"]
+dependencies = [
+    "pymmcore_plus>12"
+]
+
+[project.optional-dependencies]
+
+[project.urls]
+Source = "https://github.com/LEB-EPFL/pymmcore-eda"
+Tracker = "https://github.com/LEB-EPFL/pymmcore-eda/issues"
+Documentation = "https://LEB-EPFL.github.io/pymmcore-eda"

@@ -8,7 +8,6 @@ class Interpreter:
         self.hub.new_analysis.connect(self.interpret)
 
     def interpret(self, img: np.ndarray, event: MDAEvent, metadata: dict):
-        # Interpret the data
         print(f"Interpreting data from event {event.index}")
         max_val = np.max(img)
         print(f"Max value in image: {max_val}")
