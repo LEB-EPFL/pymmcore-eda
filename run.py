@@ -1,8 +1,8 @@
-from actuator import MDAActuator, SmartActuator
-from analyser import Analyser
-from interpreter import Interpreter
+from pymmcore_eda.actuator import MDAActuator, SmartActuator
+from pymmcore_eda.analyser import Analyser
+from pymmcore_eda.interpreter import Interpreter
 from pymmcore_plus import CMMCorePlus
-from queue_manager import QueueManager
+from pymmcore_eda.queue_manager import QueueManager
 from useq import Channel, MDASequence
 
 from pymmcore_eda.event_hub import EventHub
