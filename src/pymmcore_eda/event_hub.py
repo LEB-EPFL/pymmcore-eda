@@ -42,12 +42,11 @@ if __name__ == "__main__":
     interpreter = Interpreter(hub)
     mda_sequence = MDASequence(
         channels= ['DAPI'],
-        time_plan={"interval": 3, "loops": 1},)
+        time_plan={"interval": 3, "loops": 5},)
     base_actuator = MDAActuator(queue_manager, mda_sequence)
     smart_actuator = SmartActuator(queue_manager, hub)
     
     mmc.run_mda(queue_manager.q_iterator)
     base_actuator.thread.start()
     base_actuator.thread.join()
-    time.sleep(10)
     queue_manager.stop_seq()

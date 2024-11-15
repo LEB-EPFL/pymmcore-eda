@@ -21,7 +21,7 @@ class MDAActuator():
     def run(self):
         for event in self.mda_sequence:
             self.queue_manager.register_event(event)
-        logger.info("MDAActuator sleeping")
+        time.sleep(event.min_start_time + 3)
 
 
 class ButtonActuator():
@@ -50,8 +50,9 @@ class SmartActuator():
 
     def act(self, image, event, metadata):
         if event.index.get('t', 0)%2 == 0:
-           event = MDAEvent(index={"t": 0, "c": 2}, min_start_time=-1)
+           event = MDAEvent(index={"t": 0, "c": 2}, min_start_time=-1.5)
            self.queue_manager.register_event(event)
+           logger.info(f"SmartActuator sent {event}")
 
 
 if __name__ == "__main__":

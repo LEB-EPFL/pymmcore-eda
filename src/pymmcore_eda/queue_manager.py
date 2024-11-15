@@ -30,8 +30,15 @@ class QueueManager():
 
     def register_event(self, event):
         "Actuators call this to request an event to be put on the event_register."
+        # Offset index
         if event.index.get('t', 0) < 0:
-            event = event.replace(min_start_time= min(list(self.event_register.keys()) + [0.0]))
+            start = 0 if len(self.event_register.keys()) == 0 else min(self.event_register.keys())
+            event = event.replace(min_start_time=start)
+
+        # Offset time
+        if event.min_start_time < 0:
+            start = self.time_machine.event_seconds_elapsed() + abs(event.min_start_time)
+            event = event.replace(min_start_time=start)
 
         if not event.min_start_time in self.event_register.keys():
             self.event_register[event.min_start_time] = {'timer': None, 'events': []}
