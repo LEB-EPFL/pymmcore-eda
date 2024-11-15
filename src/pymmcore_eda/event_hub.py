@@ -30,8 +30,6 @@ if __name__ == "__main__":
         ["C:/Program Files/Micro-Manager-2.0/"] + list(mmc.getDeviceAdapterSearchPaths()))
     mmc.loadSystemConfiguration()
 
-    from _logger import configure_logging
-    configure_logging()    
 
     mmc.mda.engine.use_hardware_sequencing = False
 

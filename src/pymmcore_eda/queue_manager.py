@@ -2,11 +2,11 @@
 from __future__ import annotations
 from queue import Queue
 
-from time_machine import TimeMachine
+from pymmcore_eda.time_machine import TimeMachine
+from pymmcore_eda._logger import logger
 from threading import Timer
 from useq import MDAEvent
 import time
-from _logger import logger
 
 
 class QueueManager():

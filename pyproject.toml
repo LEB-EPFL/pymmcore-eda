@@ -25,7 +25,7 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-    "pymmcore_plus>12"
+    "pymmcore_plus >= 0.12"
 ]
 
 [project.optional-dependencies]
@@ -34,3 +34,7 @@ dependencies = [
 Source = "https://github.com/LEB-EPFL/pymmcore-eda"
 Tracker = "https://github.com/LEB-EPFL/pymmcore-eda/issues"
 Documentation = "https://LEB-EPFL.github.io/pymmcore-eda"
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "INFO"

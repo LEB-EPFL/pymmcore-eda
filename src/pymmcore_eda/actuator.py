@@ -3,7 +3,7 @@ from queue import Queue
 from useq import MDAEvent
 from threading import Thread
 import time
-from _logger import logger
+from pymmcore_eda._logger import logger
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from event_hub import EventHub
@@ -16,12 +16,14 @@ class MDAActuator():
     def __init__(self, queue_manager: QueueManager, mda_sequence: MDASequence):
         self.queue_manager = queue_manager
         self.mda_sequence = mda_sequence
+        self.wait = True
         self.thread = Thread(target=self.run)
 
-    def run(self):
+    def run(self, wait=True):
         for event in self.mda_sequence:
             self.queue_manager.register_event(event)
-        time.sleep(event.min_start_time + 3)
+        if self.wait:
+            time.sleep(event.min_start_time + 3)
 
 
 class ButtonActuator():
