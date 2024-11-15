@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from event_hub import EventHub
     from useq import MDAEvent
 
+
 class Analyser:
     """Analyse the image and produce an event score map for the interpreter."""
 
@@ -17,7 +18,7 @@ class Analyser:
         self.hub.frameReady.connect(self._analyse)
 
     def _analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict):
-        if event.index.get('c', 0) != 0:
+        if event.index.get("c", 0) != 0:
             return
         logger.info("Analyser")
         img[img < 5000] = 0

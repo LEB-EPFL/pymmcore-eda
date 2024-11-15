@@ -57,8 +57,7 @@ class SmartActuator:
         self.hub.new_interpretation.connect(self._act)
 
     def _act(self, image, event, metadata):
-        if event.index.get('t', 0)%2 == 0:
-           event = MDAEvent(index={"t": -1, "c": 2}, min_start_time=0)
-           self.queue_manager.register_event(event)
-           logger.info(f"SmartActuator sent {event}")
-
+        if event.index.get("t", 0) % 2 == 0:
+            event = MDAEvent(index={"t": -1, "c": 2}, min_start_time=0)
+            self.queue_manager.register_event(event)
+            logger.info(f"SmartActuator sent {event}")
