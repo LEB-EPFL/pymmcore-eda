@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING
-from _logger import logger
+from pymmcore_eda._logger import logger
 if TYPE_CHECKING:
     import numpy as np
     from event_hub import EventHub

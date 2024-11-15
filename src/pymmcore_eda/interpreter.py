@@ -5,7 +5,7 @@ if TYPE_CHECKING:
     import numpy as np
     from useq import MDAEvent
     from pymmcore_plus.metadata import FrameMetaV1
-from _logger import logger
+from pymmcore_eda._logger import logger
 
 class Interpreter:
     def __init__(self, hub: EventHub):
