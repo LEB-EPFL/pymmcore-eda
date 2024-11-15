@@ -1,6 +1,5 @@
 import time
 from typing import TYPE_CHECKING
-from pymmcore_plus import CMMCorePlus
 if TYPE_CHECKING:
     from useq import MDAEvent
 
@@ -13,7 +12,7 @@ class TimeMachine():
     def __init__(self):
         self._t0 = time.perf_counter()
 
-    def consume_event(self, event: 'MDAEvent'):
+    def consume_event(self, event: MDAEvent):
         if event.reset_event_timer:
             self._t0 = time.perf_counter()
 
@@ -23,6 +22,7 @@ class TimeMachine():
 
 
 if __name__ == "__main__":
+    from pymmcore_plus import CMMCorePlus
     from useq import MDASequence
     mmc = CMMCorePlus()
     mmc.setDeviceAdapterSearchPaths(

@@ -1,10 +1,13 @@
 from queue import Queue
-from useq import MDAEvent, MDASequence
+from useq import MDAEvent
 from threading import Thread
 import time
 from pymmcore_plus._logger import logger
-from queue_manager import QueueManager
-from event_hub import EventHub
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from event_hub import EventHub
+    from useq import MDASequence
+    from queue_manager import QueueManager
 
 
 class MDAActuator():
@@ -54,6 +57,7 @@ if __name__ == "__main__":
     from pymmcore_plus import CMMCorePlus
     from queue_manager import QueueManager
     from time_machine import TimeMachine
+    from useq import MDASequence 
 
     mmc = CMMCorePlus()
     mmc.setDeviceAdapterSearchPaths(

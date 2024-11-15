@@ -1,7 +1,8 @@
-from event_hub import EventHub
-import numpy as np
-from useq import MDAEvent
-from psygnal import Signal
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    import numpy as np
+    from event_hub import EventHub
+    from useq import MDAEvent
 
 class Analyser:
     def __init__(self, hub: EventHub):
