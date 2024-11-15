@@ -1,11 +1,13 @@
 
+from __future__ import annotations
 from queue import Queue
 
 from time_machine import TimeMachine
 from threading import Timer
 from useq import MDAEvent
 import time
-from pymmcore_plus._logger import logger
+from _logger import logger
+
 
 class QueueManager():
     """ Component responsible to manage events and their timing in front of the Queue.
@@ -28,8 +30,9 @@ class QueueManager():
 
     def register_event(self, event):
         "Actuators call this to request an event to be put on the event_register."
-        if event.min_start_time == -1:
-            event = event.replace(min_start_time= min(self.event_register.keys()))
+        if event.index.get('t', 0) < 0:
+            event = event.replace(min_start_time= min(list(self.event_register.keys()) + [0.0]))
+
         if not event.min_start_time in self.event_register.keys():
             self.event_register[event.min_start_time] = {'timer': None, 'events': []}
         
@@ -41,7 +44,6 @@ class QueueManager():
         """Just before the actual acquisition time, put the event on the queue that exposes them to the pymmcore-plus runner."""
         events = self.event_register[start_time]['events'].copy()
         events = sorted(events, key= lambda event:(event.index.get('c', 100)))
-        # logger.info(f"Queueing events: {self.time_machine.event_seconds_elapsed()}")
         for idx, event in enumerate(events):
             new_index = event.index.copy()
             new_index['t'] = self.t_idx

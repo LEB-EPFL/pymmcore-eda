@@ -1,4 +1,6 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING
+from _logger import logger
 if TYPE_CHECKING:
     import numpy as np
     from event_hub import EventHub
@@ -12,7 +14,6 @@ class Analyser:
     def analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict):
         if event.index.get('c', 0) != 0:
             return
-        # Analyse the data
-        print(f"Analysing data from event {event.index}")
+        logger.info("Analyser")
         img[img < 5000] = 0
         self.hub.new_analysis.emit(img, event, metadata)
