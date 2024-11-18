@@ -41,8 +41,9 @@ class CustomEngine(MDAEngine):
         The engine should be in a state where it can call `exec_event`
         without any additional preparation.
         """
-
+        
         if CustomKeyes.GALVO in event.metadata:
+            super().setup_event(event)
             self._smart_scan_setup(event.metadata)
         else:
             super().setup_event(event)
