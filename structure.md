@@ -10,12 +10,18 @@ graph TD;
         TimeMachine
         Analyser
         Interpreter
+        EventHub
     end
     subgraph pymmcore-plus
         Engine
         Runner
+        Writer
+    end
+    subgraph pymmcore-widgets
+        Viewer    
     end
     Queue
+    frameReady>frameReady]
 
 
     BaseActuator --> QueueManager
@@ -26,10 +32,16 @@ graph TD;
     Queue --> Runner
     Runner -- MDAEvent --> Engine
     Engine -- Image --> Runner
-    Runner --> Image
-    Image --> Analyser
+    Runner --> frameReady
+    frameReady --> Writer
+    frameReady --> EventHub
+    EventHub --> Analyser
+    Analyser -- analysis --> EventHub
+    EventHub -- analysis --> write_frame>write_frame]
+    write_frame --> Writer
     Analyser --> Interpreter
     Interpreter --> SmartActuator
+    Writer --> Viewer
 ```
 
 
