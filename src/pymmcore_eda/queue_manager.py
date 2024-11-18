@@ -35,7 +35,13 @@ class QueueManager:
         # Offset index
         if event.index.get("t", 0) < 0:
             keys = list(self.event_register.keys())
-            start = 0 if len(keys) == 0 else min(keys)
+            keys = sorted(keys)
+            if len(keys) == 0:
+                start = 0
+            elif abs(event.index.get("t", 0)) > len(keys):
+                start = keys[-1]
+            else:
+                start = keys[abs(event.index.get("t", 0))-1]
             event = event.replace(min_start_time=start)
 
         # Offset time

@@ -4,7 +4,7 @@ import time
 from threading import Thread
 from typing import TYPE_CHECKING
 
-from useq import MDAEvent
+from useq import MDAEvent, Channel
 
 from pymmcore_eda._logger import logger
 
@@ -42,10 +42,10 @@ class ButtonActuator:
             button = input()
             if button == "q":
                 break
-            event = MDAEvent(index={"t": 0, "c": 2}, min_start_time=-1)
-            self.queue_manager.register_event(event)
-            print(self.queue_manager.event_register.keys())
-            logger.info(f"Button {button} pressed, event sent to queue manager")
+            for i in range(1,4):
+                event = MDAEvent(channel={"config":"mCherry (550nm)", "exposure": 10.}, index={"t": -i, "c": 2}, min_start_time=0)
+                self.queue_manager.register_event(event)
+            logger.info(f"Button {button} pressed, events sent to queue manager")
 
 
 class SmartActuator:
