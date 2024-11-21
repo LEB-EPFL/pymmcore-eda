@@ -29,22 +29,22 @@ mmc.setProperty("pE-800", "IntensityH", 10)
 mmc.setConfig("Channel","mCherry (550nm)")
 
 # button actuator
-queue_manager = QueueManager()
+# queue_manager = QueueManager()
 
-mda_sequence = MDASequence(
-    channels=(Channel(config="GFP (470nm)",exposure=10),),
-    time_plan={"interval": 3, "loops": 5},
-)
-base_actuator = MDAActuator(queue_manager, mda_sequence)
-button_actuator = ButtonActuator(queue_manager)
+# mda_sequence = MDASequence(
+#     channels=(Channel(config="GFP (470nm)",exposure=10),),
+#     time_plan={"interval": 3, "loops": 5},
+# )
+# base_actuator = MDAActuator(queue_manager, mda_sequence)
+# button_actuator = ButtonActuator(queue_manager)
 
-mmc.run_mda(queue_manager.q_iterator)
-base_actuator.thread.start()
+# mmc.run_mda(queue_manager.q_iterator)
+# base_actuator.thread.start()
 
-button_actuator.thread.start()
-base_actuator.thread.join()
-button_actuator.thread.join()
-queue_manager.stop_seq()
+# button_actuator.thread.start()
+# base_actuator.thread.join()
+# button_actuator.thread.join()
+# queue_manager.stop_seq()
 
 # smart actuator
 hub = EventHub(mmc.mda)
@@ -61,7 +61,7 @@ smart_actuator = SmartActuator(queue_manager, hub)
 
 mmc.run_mda(queue_manager.q_iterator)
 base_actuator.thread.start()
-smart_actuator.thread.start()
-smart_actuator.thread.join()
+# smart_actuator.thread.start()
+# smart_actuator.thread.join()
 base_actuator.thread.join()
 queue_manager.stop_seq()
