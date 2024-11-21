@@ -28,11 +28,9 @@ mmc.setProperty("pE-800", "SelectionH", 1)
 mmc.setProperty("pE-800", "IntensityH", 10)
 mmc.setConfig("Channel","mCherry (550nm)")
 
-#hub = EventHub(mmc.mda)
+# button actuator
 queue_manager = QueueManager()
 
-# analyser = Analyser(hub)
-# interpreter = Interpreter(hub)
 mda_sequence = MDASequence(
     channels=(Channel(config="GFP (470nm)",exposure=10),),
     time_plan={"interval": 3, "loops": 5},
@@ -46,4 +44,24 @@ base_actuator.thread.start()
 button_actuator.thread.start()
 base_actuator.thread.join()
 button_actuator.thread.join()
+queue_manager.stop_seq()
+
+# smart actuator
+hub = EventHub(mmc.mda)
+queue_manager = QueueManager()
+
+analyser = Analyser(hub)
+interpreter = Interpreter(hub)
+mda_sequence = MDASequence(
+    channels=(Channel(config="GFP (470nm)",exposure=10),),
+    time_plan={"interval": 3, "loops": 5},
+)
+base_actuator = MDAActuator(queue_manager, mda_sequence)
+smart_actuator = SmartActuator(queue_manager, hub)
+
+mmc.run_mda(queue_manager.q_iterator)
+base_actuator.thread.start()
+smart_actuator.thread.start()
+smart_actuator.thread.join()
+base_actuator.thread.join()
 queue_manager.stop_seq()

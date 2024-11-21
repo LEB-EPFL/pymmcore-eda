@@ -58,6 +58,6 @@ class SmartActuator:
 
     def _act(self, image, event, metadata):
         if event.index.get("t", 0) % 2 == 0:
-            event = MDAEvent(index={"t": -1, "c": 2}, min_start_time=0)
+            event = MDAEvent(channel={"config":"mCherry (550nm)", "exposure": 10.}, index={"t": -1, "c": 2}, min_start_time=0)
             self.queue_manager.register_event(event)
             logger.info(f"SmartActuator sent {event}")
