@@ -13,9 +13,9 @@ from useq import Channel, MDASequence
 from pymmcore_eda.event_hub import EventHub
 
 mmc = CMMCorePlus()
-# mmc.setDeviceAdapterSearchPaths(
-#     ["C:/Program Files/Micro-Manager-2.0/", *list(mmc.getDeviceAdapterSearchPaths())]
-# )
+mmc.setDeviceAdapterSearchPaths(
+    ["C:/Program Files/Micro-Manager-2.0/", *list(mmc.getDeviceAdapterSearchPaths())]
+)
 mmc.loadSystemConfiguration("C:/Control_2/Zeiss-microscope/240715_ZeissAxioObserver7.cfg")
 mmc.mda.engine.use_hardware_sequencing = False
 mmc.setProperty("pE-800", "Global State", 1)
@@ -61,7 +61,5 @@ smart_actuator = SmartActuator(queue_manager, hub)
 
 mmc.run_mda(queue_manager.q_iterator)
 base_actuator.thread.start()
-# smart_actuator.thread.start()
-# smart_actuator.thread.join()
 base_actuator.thread.join()
 queue_manager.stop_seq()
