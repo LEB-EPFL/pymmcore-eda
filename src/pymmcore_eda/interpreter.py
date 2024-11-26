@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+# import matplotlib.pyplot as plt
+
 if TYPE_CHECKING:
     import numpy as np
     from event_hub import EventHub
@@ -19,4 +21,6 @@ class Interpreter:
     def _interpret(self, img: np.ndarray, event: MDAEvent, metadata: dict):
         logger.info("Interpreter")
         max_val = img > 1
+        # plt.imshow(max_val)
+        # plt.show()
         self.hub.new_interpretation.emit(max_val, event, metadata)

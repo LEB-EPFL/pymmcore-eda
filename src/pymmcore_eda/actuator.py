@@ -5,6 +5,7 @@ from threading import Thread
 from typing import TYPE_CHECKING
 
 from useq import MDAEvent, Channel
+import numpy as np
 
 from pymmcore_eda._logger import logger
 
@@ -56,8 +57,14 @@ class SmartActuator:
         self.hub = hub
         self.hub.new_interpretation.connect(self._act)
 
+    # def _act(self, image, event, metadata):
+    #     if event.index.get("t", 0) % 2 == 0:
+    #         event = MDAEvent(channel={"config":"mCherry (550nm)", "exposure": 10.}, index={"t": -1, "c": 2}, min_start_time=0)
+    #         self.queue_manager.register_event(event)
+    #         logger.info(f"SmartActuator sent {event}")
+
     def _act(self, image, event, metadata):
-        if event.index.get("t", 0) % 2 == 0:
+        if np.sum(image) != 0: #or something like np.sum(image) >= 20 (?)
             event = MDAEvent(channel={"config":"mCherry (550nm)", "exposure": 10.}, index={"t": -1, "c": 2}, min_start_time=0)
             self.queue_manager.register_event(event)
             logger.info(f"SmartActuator sent {event}")
