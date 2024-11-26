@@ -24,11 +24,14 @@ class QueueManager:
         self.event_register: dict = {}
         self.preemptive = 0.02
         self.t_idx = 0
+
+        self._axis_max: dict[str, int] = {}
         # self.axis_order = 'tpgcz' we might need this
 
-    def register_actuator(self, actuator):
+    def register_actuator(self, actuator, n_channels: int = 1):
         """Actuator asks for indices for example which channel to push to."""
-        pass
+        self._axis_max['c'] = self._axis_max.get('c', 0) + n_channels
+        return list(range(self._axis_max['c']-n_channels, self._axis_max['c']))
 
     def register_event(self, event):
         """Actuators call this to request an event to be put on the event_register."""
@@ -57,6 +60,10 @@ class QueueManager:
         self.event_register[event.min_start_time]["events"].append(event)
         if self.event_register[event.min_start_time]["timer"] is None:
             self._set_timer_for_event(event)
+        # print(self.event_register)
+
+        for k, v in event.index.items():
+            self._axis_max[k] = max(self._axis_max.get(k, 0), v)
 
     def queue_events(self, start_time: float):
         """Put events on the queue that are due to be acquired.
@@ -91,6 +98,13 @@ class QueueManager:
 
     def _set_timer_for_event(self, event: MDAEvent):
         """Set or reset the timer for an event."""
+        #If we are the time 0 event and we reset, wait for potential other events to be queued
+        if all([event.min_start_time == 0,
+               event.reset_event_timer,
+               self.event_register[event.min_start_time]["timer"] is None]): 
+            self.event_register[event.min_start_time]["timer"] = False
+            Timer(0.05, self._set_timer_for_event, args=[event]).start()
+            return
         if self.event_register[event.min_start_time]["timer"]:
             self.event_register[event.min_start_time]["timer"].cancel()
         if event.min_start_time:

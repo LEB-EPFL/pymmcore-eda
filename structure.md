@@ -1,6 +1,7 @@
 # mermaid flow chart for the project
 
 ```mermaid
+%%{init: {'theme': 'sketch'}}%%
 graph TD;
       
     subgraph pymmcore-eda
