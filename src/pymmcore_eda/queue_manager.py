@@ -103,7 +103,7 @@ class QueueManager:
                event.reset_event_timer,
                self.event_register[event.min_start_time]["timer"] is None]): 
             self.event_register[event.min_start_time]["timer"] = False
-            Timer(0.05, self._set_timer_for_event, args=[event]).start()
+            Timer(0.005, self._set_timer_for_event, args=[event]).start()
             return
         if self.event_register[event.min_start_time]["timer"]:
             self.event_register[event.min_start_time]["timer"].cancel()
