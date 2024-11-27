@@ -24,8 +24,9 @@ class Analyser:
         if event.index.get("c", 0) != 0:
             return
         logger.info("Analyser")
-        img = imread(Path("C:/Users/kasia/Desktop/epfl/data/MAX_240930_calibration_002.ome.tif"))
-        if event.index.get("t", 0) % 2 != 0:
+        img = imread(Path("C:/Users/kasia/Desktop/epfl/data/MAX_first_light_000.ome.tif"))
+        #if event.index.get("t", 0) % 2 != 0:
+        if event.index.get("t", 0) != 2:
             img = img / 10
         img[img < 5000] = 0
         logger.info(np.sum(img))

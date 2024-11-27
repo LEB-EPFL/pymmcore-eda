@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from useq import MDAEvent, Channel
 import numpy as np
+import cv2 as cv
 
 from pymmcore_eda._logger import logger
 
@@ -65,6 +66,24 @@ class SmartActuator:
 
     def _act(self, image, event, metadata):
         if np.sum(image) != 0: #or something like np.sum(image) >= 20 (?)
-            event = MDAEvent(channel={"config":"mCherry (550nm)", "exposure": 10.}, index={"t": -1, "c": 2}, min_start_time=0)
-            self.queue_manager.register_event(event)
+            # prep binary map with squares
+            contours, _ = cv.findContours(image.astype(np.uint8), cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+            centroids = []
+            for contour in contours:
+                # Calculate the moments for each contour
+                M = cv.moments(contour)
+                if M['m00'] != 0:  # To avoid division by zero
+                    # Calculate the centroid coordinates
+                    cX = int(M['m10'] / M['m00'])
+                    cY = int(M['m01'] / M['m00'])
+                    centroids.append((cX, cY))
+            size=50 # size of the square
+            for centroid in centroids:
+                x, y = centroid
+                image[y-size:y+size, x-size:x+size] = 1        
+            # event = MDAEvent(channel={"config":"mCherry (550nm)", "exposure": 10.}, index={"t": -1, "c": 2}, min_start_time=0)
+            # self.queue_manager.register_event(event)
+            for i in range(1,4):
+                event = MDAEvent(channel={"config":"mCherry (550nm)", "exposure": 10.}, index={"t": -i, "c": 2}, min_start_time=0)
+                self.queue_manager.register_event(event)
             logger.info(f"SmartActuator sent {event}")
