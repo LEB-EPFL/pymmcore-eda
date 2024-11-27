@@ -23,8 +23,17 @@ class MDAActuator:
         self.wait = True
         self.thread = Thread(target=self._run)
 
+        self.n_channels = mda_sequence.sizes.get("c", 1)
+        self.channels = self.queue_manager.register_actuator(self, self.n_channels)
+
     def _run(self, wait=True):
+        # Adjust the channels to the ones supposed to be pushed to
         for event in self.mda_sequence:
+            new_index = event.index.copy()
+            new_index["c"] = self.channels[event.index.get("c", 0)]
+            event = event.replace(index=new_index)
+            if event.reset_event_timer and new_index.get('c', 0) > 0:
+                event = event.replace(reset_event_timer=False)
             self.queue_manager.register_event(event)
         if self.wait:
             time.sleep(event.min_start_time + 3)
