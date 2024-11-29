@@ -9,6 +9,8 @@ import numpy as np
 import cv2 as cv
 
 from pymmcore_eda._logger import logger
+from smart_scan.custom_engine import CustomKeyes, GalvoParams
+from smart_scan.helpers.function_helpers import ScanningStragies
 
 if TYPE_CHECKING:
     from event_hub import EventHub
@@ -84,6 +86,14 @@ class SmartActuator:
             # event = MDAEvent(channel={"config":"mCherry (550nm)", "exposure": 10.}, index={"t": -1, "c": 2}, min_start_time=0)
             # self.queue_manager.register_event(event)
             for i in range(1,4):
-                event = MDAEvent(channel={"config":"mCherry (550nm)", "exposure": 10.}, index={"t": -i, "c": 2}, min_start_time=0)
-                self.queue_manager.register_event(event)
+                event = MDAEvent(channel={"config":"mCherry (550nm)", "exposure": 10.}, 
+                                 index={"t": -i, "c": 2}, 
+                                 min_start_time=0,
+                                 metadata={
+                                     CustomKeyes.GALVO: {
+                                         GalvoParams.SCAN_MASK: image,
+                                         GalvoParams.STRATEGY: ScanningStragies.SNAKE,
+                                         GalvoParams.RATE: 1 # this needs to come from exposure time
+                                     }}) #added map in metadata
+                self.queue_manager.register_event(event) #czy tu musi wysłać też image? Co z metadata? - ona tylko tam chilluje czy też ją ciągniemy?
             logger.info(f"SmartActuator sent {event}")
