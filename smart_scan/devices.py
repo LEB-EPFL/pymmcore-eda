@@ -1,11 +1,12 @@
 from abc import ABC, abstractmethod
 from smart_scan.settings.instrumentSettings import instrumentSettings
-from smart_scan.helpers import loggingHelper
+from smart_scan.helpers import loggingHelper, function_helpers
 from smart_scan.resources import logStrings
 import numpy as np
 import sys
 from ctypes import *
 import ctypes
+import time
 
 logger = loggingHelper.createLogger(loggerName=__name__)
 
@@ -33,11 +34,14 @@ class Galvo_Scanners(Device):
 
     def __init__(self) -> None:
         self._isConnected = False
-        self._calibration = instrumentSettings.galvo_calibration
         self._dwf = None
         self._hdwf = None
         self._channel_x = None
         self._channel_y = None
+        self._calibration = instrumentSettings().galvo_calibration
+        self._maxV = instrumentSettings().galvo_maxV
+        self._minV = instrumentSettings().galvo_minV
+
 
     @property
     def calibration(self):
@@ -73,22 +77,111 @@ class Galvo_Scanners(Device):
         """Returns the connection status of the galvo systems."""
         return self._isConnected
 
-    def scan(self, voltage_x, voltage_y, rate):
-
+    
+    def scan(self, mask, scan_strategy, duration):
+        """Performs a scan of the non_zero pixels in mask, with the selected scanning strategy and duration [s]."""
         if not self.isConnected():
             logger.error(logStrings.GALVO_2)
+        
         else:
-            n_voltage_x = self._norm_signal(voltage_x)
-            n_voltage_y = self._norm_signal(voltage_y)
+            max_voltage = self._maxV * 1000 #[mv]
+            min_voltage = self._minV * 1000 #[mv]
 
-            self._scan(voltage_x, voltage_y, n_voltage_x, n_voltage_y, rate)
+            # Extract the non-zero values from the mask
+            scan_pixels = function_helpers.mask2active_pixels( mask, scan_strategy)
+            
+            # Converts the pixels in voltages for the output
+            scan_voltages = self._pixels2voltages(scan_pixels)
+            
+            # Limits Voltages in the range [min_voltage max_voltage], and normalizes the voltages so that max_voltage == 2**15-1
+            voltages_x = np.transpose(scan_voltages)[0].copy()
+            voltages_x = self._limit_voltage(voltage=voltages_x, min_v=min_voltage, max_v=max_voltage)
+            voltages_x *= (2**15-1)/max_voltage
+            voltages_x = np.uint16(voltages_x)
+            
+            voltages_y = np.transpose(scan_voltages)[1].copy()
+            voltages_y = self._limit_voltage(voltage=voltages_y, min_v=min_voltage, max_v=max_voltage)
+            voltages_y *= (2**15-1)/max_voltage
+            voltages_y = np.uint16(voltages_y)
 
+            # Diligent AnalogOut expects double normalized to +/-1 value
+            n_voltage_x = self._norm_voltage(voltages_x)
+            n_voltage_y = self._norm_voltage(voltages_y)
+
+            # Compute the rate
+            n_samples = len(voltages_x)
+            rate = n_samples/duration # Hz
+            
+            # Ouputs the voltages
+            self._ouput_voltages(voltages_x, voltages_y, n_voltage_x, n_voltage_y, rate)
+
+    def scan_triggered(self, mask, scan_strategy, duration):
+        """Performs a triggered scan of the non_zero pixels in mask, with the selected scanning strategy and duration [s]."""
+        if not self.isConnected():
+            logger.error(logStrings.GALVO_2)
+        
+        else:
+            max_voltage = self._maxV * 1000 #[mv]
+            min_voltage = self._minV * 1000 #[mv]
+
+            # Extract the non-zero values from the mask
+            scan_pixels = function_helpers.mask2active_pixels( mask, scan_strategy)
+            
+            # Converts the pixels in voltages for the output
+            scan_voltages = self._pixels2voltages(scan_pixels)
+            
+            # Limits Voltages in the range [min_voltage max_voltage], and normalizes the voltages so that max_voltage == 2**15-1
+            voltages_x = np.transpose(scan_voltages)[0].copy()
+            voltages_x = self._limit_voltage(voltage=voltages_x, min_v=min_voltage, max_v=max_voltage)
+            voltages_x *= (2**15-1)/max_voltage
+            voltages_x = np.uint16(voltages_x)
+            
+            voltages_y = np.transpose(scan_voltages)[1].copy()
+            voltages_y = self._limit_voltage(voltage=voltages_y, min_v=min_voltage, max_v=max_voltage)
+            voltages_y *= (2**15-1)/max_voltage
+            voltages_y = np.uint16(voltages_y)
+
+            # Diligent AnalogOut expects double normalized to +/-1 value
+            n_voltage_x = self._norm_voltage(voltages_x)
+            n_voltage_y = self._norm_voltage(voltages_y)
+
+            # Compute the rate
+            n_samples = len(voltages_x)
+            rate = n_samples/duration # Hz
+            
+            # Ouputs the voltages
+            self._ouput_voltages_trg(voltages_x, voltages_y, n_voltage_x, n_voltage_y, rate)
+    
+    
     ##########################
     ####  Private methods ####
     ##########################
+    def _limit_voltage(self, voltage:np.ndarray, min_v:float, max_v:float) -> np.ndarray:
+        """Limits the voltage array in the range [min_v, max_v]."""
+        voltage[voltage>=max_v] = max_v
+        voltage[voltage<=min_v] = min_v
+        return voltage
 
-    def _norm_signal(self, voltage):
-        """Normalises and prepare the signal to be later ouputted."""
+    def _pixels2voltages(self,pixel_sequence: np.ndarray) -> np.ndarray:
+        """
+        Converts pixel coordinates to voltages [mV], assuming a linear relation.
+        Voltage = m * pixel_coordinate + a
+        """
+        pixel_sequence = np.transpose(pixel_sequence)
+
+        m = np.zeros(pixel_sequence.shape)
+        a = np.zeros(pixel_sequence.shape)
+        m[:][0] = self._calibration['m_y']
+        m[:][1] = self._calibration['m_x']
+        a[:][0] = self._calibration['a_y']
+        a[:][1] = self._calibration['a_x']
+
+        voltage_sequence = pixel_sequence * m + a
+
+        return np.transpose(voltage_sequence)
+    
+    def _norm_voltage(self, voltage):
+        """Normalises and prepare the voltage to be later ouputted."""
         voltage_f = voltage.astype(np.float64)
         if np.dtype(voltage[0]) == np.int8 or np.dtype(voltage[0]) == np.uint8:
             print("Scaling: UINT8")
@@ -97,14 +190,17 @@ class Galvo_Scanners(Device):
         elif np.dtype(voltage[0]) == np.int16:
             print("Scaling: INT16")
             voltage_f /= 32768.0
+        elif np.dtype(voltage[0]) == np.uint16:
+            print("Scaling: UINT16")
+            voltage_f /= 16384.0
+            voltage_f -= 1.0
         elif np.dtype(voltage[0]) == np.int32:
             print("Scaling: INT32")
             voltage_f /= 2147483648.0
-
-        # prepare the data x
+        
         return (ctypes.c_double * len(voltage_f))(*voltage_f)
 
-    def _scan(self, data_x, data_y, data_c_x, data_c_y, rate):
+    def _ouput_voltages(self, data_x, data_y, data_c_x, data_c_y, rate):
         """
         Adapted from AnalogOut_Play.py
         DWF Python Example
@@ -134,7 +230,10 @@ class Galvo_Scanners(Device):
 
         dwf.FDwfAnalogOutRunSet(hdwf, channel_x, c_double(sRun))
         dwf.FDwfAnalogOutNodeFrequencySet(hdwf, channel_x, 0, c_double(rate))
-        dwf.FDwfAnalogOutNodeAmplitudeSet(hdwf, channel_x, 0, c_double(1.0))
+        dwf.FDwfAnalogOutNodeAmplitudeSet(hdwf, channel_x, 0, c_double(2.5))
+        dwf.FDwfAnalogOutOffsetSet(hdwf, channel_x, c_double(2.5)) # output between 0 and 5 V
+        dwf.FDwfAnalogOutTriggerSourceSet(hdwf, channel_x, c_byte(0))  # No trigger
+
 
         # Set the channel Y ?
         dwf.FDwfAnalogOutNodeEnableSet(hdwf, channel_y, 0, c_int(1))
@@ -143,7 +242,10 @@ class Galvo_Scanners(Device):
 
         dwf.FDwfAnalogOutRunSet(hdwf, channel_y, c_double(sRun))
         dwf.FDwfAnalogOutNodeFrequencySet(hdwf, channel_y, 0, c_double(rate))
-        dwf.FDwfAnalogOutNodeAmplitudeSet(hdwf, channel_y, 0, c_double(1.0))
+        dwf.FDwfAnalogOutNodeAmplitudeSet(hdwf, channel_y, 0, c_double(2.5))
+        dwf.FDwfAnalogOutOffsetSet(hdwf, channel_y, c_double(2.5)) # output between 0 and 5 V
+        dwf.FDwfAnalogOutTriggerSourceSet(hdwf, channel_y, c_byte(0))  # No trigger
+
 
         # prime the buffers with the first chunk of data
         cBuffer_x = c_int(0)
@@ -244,6 +346,57 @@ class Galvo_Scanners(Device):
 
             iPlay_x += dataFree_x.value
             iPlay_y += dataFree_y.value
+
+    def _ouput_voltages_trg(self, voltage_x, voltage_y, n_voltage_x, n_voltage_y, rate):
+        
+        dwf = self._dwf
+        hdwf = self._hdwf
+        channel_x = self._channel_x
+        channel_y = self._channel_y
+
+        dwf.FDwfDeviceAutoConfigureSet(hdwf, c_int(0))  # Manual configuration
+
+        # Calculate run time
+        sRun = 1.0 * voltage_x.size / rate
+
+        # Configure Channel X
+        dwf.FDwfAnalogOutNodeEnableSet(hdwf, channel_x, 0, c_int(1))
+        dwf.FDwfAnalogOutNodeFunctionSet(hdwf, channel_x, 0, c_int(31))  # funcPlay
+        dwf.FDwfAnalogOutRepeatSet(hdwf, channel_x, c_int(1))
+        dwf.FDwfAnalogOutOffsetSet(hdwf, channel_x, c_double(2.5))
+        dwf.FDwfAnalogOutRunSet(hdwf, channel_x, c_double(sRun))
+        dwf.FDwfAnalogOutNodeFrequencySet(hdwf, channel_x, 0, c_double(rate))
+        dwf.FDwfAnalogOutNodeAmplitudeSet(hdwf, channel_x, 0, c_double(2.5))
+        dwf.FDwfAnalogOutTriggerSourceSet(hdwf, channel_x, c_byte(11))  # ExternalTrigger1
+
+        # Configure Channel Y
+        dwf.FDwfAnalogOutNodeEnableSet(hdwf, channel_y, 0, c_int(1))
+        dwf.FDwfAnalogOutNodeFunctionSet(hdwf, channel_y, 0, c_int(31))  # funcPlay
+        dwf.FDwfAnalogOutRepeatSet(hdwf, channel_y, c_int(1))
+        dwf.FDwfAnalogOutOffsetSet(hdwf, channel_y, c_double(2.5))
+        dwf.FDwfAnalogOutRunSet(hdwf, channel_y, c_double(sRun))
+        dwf.FDwfAnalogOutNodeFrequencySet(hdwf, channel_y, 0, c_double(rate))
+        dwf.FDwfAnalogOutNodeAmplitudeSet(hdwf, channel_y, 0, c_double(2.5))
+        dwf.FDwfAnalogOutTriggerSourceSet(hdwf, channel_y, c_byte(11))  # ExternalTrigger1
+
+        # Buffer Configuration
+        cBuffer_x = c_int(0)
+        cBuffer_y = c_int(0)
+
+        dwf.FDwfAnalogOutNodeDataInfo(hdwf, channel_x, 0, 0, byref(cBuffer_x))
+        dwf.FDwfAnalogOutNodeDataInfo(hdwf, channel_y, 0, 0, byref(cBuffer_y))
+
+        cBuffer_x.value = min(cBuffer_x.value, voltage_x.size)
+        cBuffer_y.value = min(cBuffer_y.value, voltage_y.size)
+
+        dwf.FDwfAnalogOutNodeDataSet(hdwf, channel_x, 0, n_voltage_x, cBuffer_x)
+        dwf.FDwfAnalogOutNodeDataSet(hdwf, channel_y, 0, n_voltage_y, cBuffer_y)
+
+        # Enable Channels (waiting for trigger)
+        dwf.FDwfAnalogOutConfigure(hdwf, channel_x, c_int(1))
+        dwf.FDwfAnalogOutConfigure(hdwf, channel_y, c_int(1))
+
+        print("Waiting for trigger...")
 
     def _connect(self) -> tuple:
         """Connects the galvo mirror system, and return objects needed for the scan"""
