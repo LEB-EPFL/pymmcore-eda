@@ -4,6 +4,6 @@
 # where position is measured in µm
 # Voltage in mV
 
-GALVO_CALIBRATION = {"m_x": 1, "m_y": 1, "a_x": 0, "a_y": 0}
+GALVO_CALIBRATION = {"m_x": 29.2, "m_y": 32, "a_x": 520, "a_y": 600}
 GALVO_MAXV = 5 #[V]
 GALVO_MINV = 0 #[V]
