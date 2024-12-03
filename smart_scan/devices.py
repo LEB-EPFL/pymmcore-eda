@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from smart_scan.settings.instrumentSettings import instrumentSettings
-from smart_scan.helpers import loggingHelper, function_helpers
+from smart_scan.helpers import loggingHelper
+from smart_scan.helpers.function_helpers import ScanningStragies, mask2active_pixels
+
 from smart_scan.resources import logStrings
 import numpy as np
 import sys
@@ -78,8 +80,15 @@ class Galvo_Scanners(Device):
         return self._isConnected
 
     
-    def scan(self, mask, scan_strategy, duration):
-        """Performs a scan of the non_zero pixels in mask, with the selected scanning strategy and duration [s]."""
+    def scan(self, mask:np.ndarray, pixelsize:float, scan_strategy:ScanningStragies, duration:float):
+        """Performs a scan of the non_zero pixels in mask, with the selected scanning strategy and duration [s].
+        
+        Input: 
+        mask:           2D numpy array
+        pixelsize:      the size of the mask's pixels [µm]
+        scan_strategy:  the desired scanning strategy, from the class ScanningStragies 
+        duration:       the duration of the scan [s]."""
+        
         if not self.isConnected():
             logger.error(logStrings.GALVO_2)
         
@@ -88,10 +97,10 @@ class Galvo_Scanners(Device):
             min_voltage = self._minV * 1000 #[mv]
 
             # Extract the non-zero values from the mask
-            scan_pixels = function_helpers.mask2active_pixels( mask, scan_strategy)
+            scan_pixels = mask2active_pixels( mask=mask, scan_strategy=scan_strategy)
             
-            # Converts the pixels in voltages for the output
-            scan_voltages = self._pixels2voltages(scan_pixels)
+            # Converts the pixels of the mask in voltages for the output
+            scan_voltages = self._pixels2voltages(scan_pixels, pixelsize)
             
             # Limits Voltages in the range [min_voltage max_voltage], and normalizes the voltages so that max_voltage == 2**15-1
             voltages_x = np.transpose(scan_voltages)[0].copy()
@@ -115,8 +124,16 @@ class Galvo_Scanners(Device):
             # Ouputs the voltages
             self._ouput_voltages(voltages_x, voltages_y, n_voltage_x, n_voltage_y, rate)
 
-    def scan_triggered(self, mask, scan_strategy, duration):
-        """Performs a triggered scan of the non_zero pixels in mask, with the selected scanning strategy and duration [s]."""
+    def scan_triggered(self, mask:np.ndarray, pixelsize:float, scan_strategy:ScanningStragies, duration:float):
+        """Performs a triggered scan of the non_zero pixels in mask, with the selected scanning strategy and duration [s].
+        
+        Input: 
+        mask:           2D numpy array
+        pixelsize:      the size of the mask's pixels [µm]
+        scan_strategy:  the desired scanning strategy, from the class ScanningStragies 
+        duration:       the duration of the scan [s]."""
+
+
         if not self.isConnected():
             logger.error(logStrings.GALVO_2)
         
@@ -125,10 +142,10 @@ class Galvo_Scanners(Device):
             min_voltage = self._minV * 1000 #[mv]
 
             # Extract the non-zero values from the mask
-            scan_pixels = function_helpers.mask2active_pixels( mask, scan_strategy)
+            scan_pixels = mask2active_pixels( mask, scan_strategy)
             
             # Converts the pixels in voltages for the output
-            scan_voltages = self._pixels2voltages(scan_pixels)
+            scan_voltages = self._pixels2voltages(scan_pixels, pixelsize)
             
             # Limits Voltages in the range [min_voltage max_voltage], and normalizes the voltages so that max_voltage == 2**15-1
             voltages_x = np.transpose(scan_voltages)[0].copy()
@@ -162,10 +179,10 @@ class Galvo_Scanners(Device):
         voltage[voltage<=min_v] = min_v
         return voltage
 
-    def _pixels2voltages(self,pixel_sequence: np.ndarray) -> np.ndarray:
+    def _pixels2voltages(self,pixel_sequence: np.ndarray, pixelsize:float) -> np.ndarray:
         """
         Converts pixel coordinates to voltages [mV], assuming a linear relation.
-        Voltage = m * pixel_coordinate + a
+        Voltage = m * pixel_coordinate*pixelsize + a
         """
         pixel_sequence = np.transpose(pixel_sequence)
 
@@ -176,7 +193,7 @@ class Galvo_Scanners(Device):
         a[:][0] = self._calibration['a_y']
         a[:][1] = self._calibration['a_x']
 
-        voltage_sequence = pixel_sequence * m + a
+        voltage_sequence = pixel_sequence * pixelsize * m + a
 
         return np.transpose(voltage_sequence)
     
