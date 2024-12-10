@@ -52,7 +52,6 @@ class Analyser:
     """Analyse the image and produce an event score map for the interpreter."""
 
     def __init__(self, hub: EventHub):
-        #self.new_image = np.zeros((64, 64)) #swap image from demo camera to something useful for testing
         settings = AnalyserSettings()
         self.hub = hub
         self.hub.frameReady.connect(self._analyse)

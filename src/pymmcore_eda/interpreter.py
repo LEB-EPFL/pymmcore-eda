@@ -12,7 +12,7 @@ from pymmcore_eda._logger import logger
 
 class InterpreterSettings:
     threshold: float = 0.999
-    square_size: int = 50
+    square_size: int = 50 #px
 
 class Interpreter:
     """Get event score and produce a binary image that informs the actuator."""
