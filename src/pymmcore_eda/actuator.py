@@ -73,17 +73,10 @@ class SmartActuator:
     def _act(self, image, event, metadata):
         scan_map = self.storage.get_map()
         if np.sum(image) != 0:
-            print('SHAPE_IMAGE', image.shape)
-            print('SHAPE_SCAN_MAP', scan_map.shape)
-            print('SIZE SCAN_MAP', np.size(scan_map))
-            print('SUM_SCAN_MAP', np.sum(scan_map)) 
             # check if we've already picked up this event
             map_diff = np.sum(np.abs(np.int8(image) - np.int8(scan_map)))
-            print('MAP_DIFF', map_diff)
-            print('THRESHOLD', np.size(image) * 0.05)
             if map_diff > np.size(image) * 0.05:
                 print('DIFFERENT MAPS')
-                plt.imsave("C:/Users/kasia/Desktop/actuator.png", image) 
                 for i in range(1,4):
                     event = MDAEvent(channel={"config":"mCherry (550nm)", "exposure": 10.}, 
                                     index={"t": -i, "c": 2}, 
@@ -96,8 +89,6 @@ class SmartActuator:
                                         }})
                     self.queue_manager.register_event(event)
                 scan_map = image
-                print('SHAPE_SCAN_MAP', scan_map.shape)
-                logger.info(f"SmartActuator sent {event}")
             else:
                 print('SAME MAPS')
             self.storage.save_map(scan_map)

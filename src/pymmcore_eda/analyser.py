@@ -66,14 +66,10 @@ class Analyser:
             return
         img = self.dummy_data[event.index.get("t", 0):event.index.get("t", 0)+3]
         #norm image?
-        print('SHAPE', img.shape)
         img = img.swapaxes(0,2)
         img = np.expand_dims(img, 0)
         output = self.model.predict(img)
         output = output[0, :, :, 0]
         print('MAX', np.max(output))
-        plt.imsave("C:/Users/kasia/Desktop/analyser.png", output)
         logger.info("Analyser")
         self.hub.new_analysis.emit(output, event, metadata)
-         
-        #print(output)

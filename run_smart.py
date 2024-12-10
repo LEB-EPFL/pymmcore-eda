@@ -27,7 +27,7 @@ analyser = Analyser(hub)
 interpreter = Interpreter(hub)
 mda_sequence = MDASequence(
     channels=(Channel(config="GFP (470nm)",exposure=10),),
-    time_plan={"interval": 3, "loops": 2},
+    time_plan={"interval": 3, "loops": 10},
 )
 base_actuator = MDAActuator(queue_manager, mda_sequence)
 smart_actuator = SmartActuator(queue_manager, hub)
