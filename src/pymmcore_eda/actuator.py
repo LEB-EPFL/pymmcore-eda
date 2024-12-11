@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 from useq import MDAEvent, Channel
 import numpy as np
-from matplotlib import pyplot as plt
 
 from pymmcore_eda._logger import logger
 from smart_scan.custom_engine import CustomKeyes, GalvoParams
@@ -75,7 +74,7 @@ class SmartActuator:
         if np.sum(image) != 0:
             # check if we've already picked up this event
             map_diff = np.sum(np.abs(np.int8(image) - np.int8(scan_map)))
-            if map_diff > np.size(image) * 0.05:
+            if map_diff > np.size(image) * 0.1:
                 print('DIFFERENT MAPS')
                 for i in range(1,4):
                     event = MDAEvent(channel={"config":"mCherry (550nm)", "exposure": 10.}, 
