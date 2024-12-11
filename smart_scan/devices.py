@@ -65,6 +65,7 @@ class Galvo_Scanners(Device):
                 self._isConnected = True
 
             except RuntimeError:
+                print("connection error")
                 loggingHelper.displayMessage(logStrings.GALVO_1)
                 logger.error(logStrings.GALVO_1)
 
@@ -124,6 +125,9 @@ class Galvo_Scanners(Device):
             # Compute the rate
             n_samples = len(voltages_x)
             rate = n_samples/duration # Hz
+
+            print(f'duration: {duration}')
+            print(f'rate: {rate}')
 
             if rate < self._maxRate:
                 # Ouputs the voltages
@@ -319,9 +323,21 @@ class Galvo_Scanners(Device):
             iPlay_x += dataFree_x.value
             iPlay_y += dataFree_y.value
 
-
+        while True:
+            # Check status of the analog output
+            if dwf.FDwfAnalogOutStatus(hdwf, channel_x, byref(sts)) != 1:
+                # print("Error fetching status")
+                break
             
+            if sts.value != 3:  # 3 corresponds to DwfStateRunning
+                # print("No longer running")
+                break
 
+            # Check timeout
+            if time.time() - start_t >= max_t:
+                print("Timeout")
+                break
+            
         # Final summary
         print(f"Final Play Position: iPlay_x={iPlay_x}, iPlay_y={iPlay_y}")
         print(f"Data Size: data_x.size={data_x.size}, data_y.size={data_y.size}")
