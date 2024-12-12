@@ -18,10 +18,10 @@ mmc.setDeviceAdapterSearchPaths(
 )
 mmc.loadSystemConfiguration()
 
-#from smart_scan.custom_engine import CustomEngine
-#mmc.mda.set_engine(CustomEngine(mmc))
+# from smart_scan.custom_engine import CustomEngine
+# mmc.mda.set_engine(CustomEngine(mmc))
 
-mmc.mda.engine.use_hardware_sequencing = False # to chyba nie zadziala - trzeba dodac te funkcje do custom engine? I wskazać tu custom engine?
+mmc.mda.engine.use_hardware_sequencing = False # ref. custom engine
 
 
 hub = EventHub(mmc.mda)
@@ -36,7 +36,7 @@ mda_sequence = MDASequence(
 base_actuator = MDAActuator(queue_manager, mda_sequence)
 smart_actuator = SmartActuator(queue_manager, hub)
 
-mmc.run_mda(queue_manager.q_iterator) # tu się wywala: Dlatego, ze nie mam podłączonego AD3? ERROR:pymmcore-plus:Galvo_Scanners.disconnect() missing 1 required positional argument: 'self'
+mmc.run_mda(queue_manager.q_iterator)
 base_actuator.thread.start()
 base_actuator.thread.join()
 queue_manager.stop_seq()

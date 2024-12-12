@@ -83,8 +83,11 @@ class SmartActuator:
                                     metadata={
                                         CustomKeyes.GALVO: {
                                             GalvoParams.SCAN_MASK: image,
+                                            #GalvoParams.PIXEL_SIZE : 0.1,
                                             GalvoParams.STRATEGY: ScanningStragies.SNAKE,
-                                            GalvoParams.RATE: 1 #this needs to come from exposure time
+                                            #GalvoParams.DURATION : 1,
+                                            #GalvoParams.TRIGGERED : True,
+                                            #GalvoParams.TIMEOUT : 2
                                         }})
                     self.queue_manager.register_event(event)
                 scan_map = image

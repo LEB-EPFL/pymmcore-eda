@@ -6,6 +6,7 @@ from tifffile import imread
 from pathlib import Path
 from tensorflow import keras
 import tensorflow as tf
+from threading import Thread
 
 from pymmcore_eda._logger import logger
 
@@ -54,7 +55,6 @@ class Analyser:
         settings = AnalyserSettings()
         self.hub = hub
         self.hub.frameReady.connect(self._analyse)
-        # load model
         self.model = keras.models.load_model(settings.model_path)
         print("Model loaded")
         self.images = np.zeros((3, 2048, 2048))
@@ -62,18 +62,26 @@ class Analyser:
         self.dummy_data = imread(Path("C:/Users/kasia/Desktop/epfl/stk_0010_FOV_1_MMStack_Default.ome.tif"))
 
     def _analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict):
-        if event.index.get("c", 0) != 0:
+        self.img = img
+        self.event = event
+        self.metadata = metadata
+        if self.event.index.get("c", 0) != 0:
             return
-        img = self.dummy_data[event.index.get("t", 0)]
-        self.images[-1] = img
-        if event.index.get("t", 0) < 2:
-            return
-        else:
-            input = self.images.swapaxes(0,2)
-            input = np.expand_dims(input, 0)
-            output = self.model.predict(input)
-            output = output[0, :, :, 0]
-            #print('MAX', np.max(output))
-        self.images[:-1] = self.images[1:]
-        logger.info("Analyser")
-        self.hub.new_analysis.emit(output, event, metadata)
+        self.img = self.dummy_data[self.event.index.get("t", 0)]
+        self.images[-1] = self.img
+        
+        def predict():
+            if self.event.index.get("t", 0) < 2:
+                return
+            else:
+                input = self.images.swapaxes(0,2)
+                input = np.expand_dims(input, 0)
+                output = self.model.predict(input)
+                output = output[0, :, :, 0]
+                #print('MAX', np.max(output))
+            self.images[:-1] = self.images[1:]
+            logger.info("Analyser")
+            self.hub.new_analysis.emit(output, event, metadata)
+
+        predict_thread = Thread(target=predict)
+        predict_thread.start()
