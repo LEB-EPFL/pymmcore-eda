@@ -29,8 +29,7 @@ class CustomEngine(MDAEngine):
         This method is called once at the beginning of a sequence.
         (The sequence object needn't be used here if not necessary)
         """
-        # lasers off
-        print('in setup_sequence \n')
+        print('--> in setup_sequence')
         gs.connect()
 
 
@@ -42,7 +41,7 @@ class CustomEngine(MDAEngine):
         The engine should be in a state where it can call `exec_event`
         without any additional preparation.
         """
-        print('in setup_event \n')
+        print('--> in setup_event')
         
         if str(CustomKeyes.GALVO.value) in event.metadata:
             super().setup_event(event)
@@ -57,16 +56,16 @@ class CustomEngine(MDAEngine):
         executing the event. The default assumption is to acquire an image,
         but more elaborate events will be possible.
         """
-        print('in exec_event \n')
+        print('--> in exec_event')
         return super().exec_event(event)
 
     def teardown_sequence(self, sequence: useq.MDASequence):
-        # laser off
-        print('in teardown_sequence \n')
+        print('--> in teardown_sequence')
+        gs.disconnect()
+
 
     def _smart_scan_setup(self, metadata: dict) -> None:
-        print(f"Setting up the galvanometric mirrors with {metadata}")
-        
+        print(f"--> Setting up the galvanometric mirrors")
         galvo_string = str(CustomKeyes.GALVO.value)
 
         # Define a wrapper function for the scan operation
@@ -81,14 +80,11 @@ class CustomEngine(MDAEngine):
                 timeout=metadata[galvo_string][GalvoParams.TIMEOUT]
             )
             print("Ending scan task.")
-            gs.disconnect()
 
         # Start the scan operation in a new thread
         scan_thread = threading.Thread(target=scan_task, daemon=False)
         scan_thread.start()
         
-
-
 if __name__ == "__main__":
     core = CMMCorePlus.instance()
     core.loadSystemConfiguration("smart_scan/resources/MMConfig_demo.cfg")
@@ -96,23 +92,19 @@ if __name__ == "__main__":
     core.mda.set_engine(CustomEngine(core))
     gs = Galvo_Scanners()
 
-
-    from PIL import Image
-    import time
-    mask1 = np.array(Image.open('smart_scan/resources/mask_big_2.tif'))
-    mask2 = np.array(Image.open('smart_scan/resources/Mask_square.tif'))
-    
+    # Disable hardware sequencing
+    core.mda.engine.use_hardware_sequencing = False
 
     experiment = [
-        # useq.MDAEvent(),
-        # useq.MDAEvent(),
+        useq.MDAEvent(),
+        useq.MDAEvent(),
         useq.MDAEvent(
             metadata={
                 CustomKeyes.GALVO: {
                     GalvoParams.SCAN_MASK: np.ones([40,40]),
                     GalvoParams.PIXEL_SIZE : 2.56,
                     GalvoParams.STRATEGY: ScanningStragies.SNAKE,
-                    GalvoParams.DURATION : 0.1,
+                    GalvoParams.DURATION : 1,
                     GalvoParams.TRIGGERED : True,
                     GalvoParams.TIMEOUT : 10
                     }
