@@ -11,4 +11,4 @@ GALVO_MAXV = 5 #[V]
 GALVO_MINV = 0 #[V]
 
 # The maximum rate [Hz] at which the volta stream is sent to the galvo mirrors
-MAX_RATE = 1e3 #[Hz]
+MAX_RATE = 10e3 #[Hz]
