@@ -6,6 +6,7 @@ from smart_scan.devices import Galvo_Scanners
 from enum import IntEnum
 import numpy as np
 import threading
+import time
 
 
 class CustomKeyes(IntEnum):
@@ -30,7 +31,7 @@ class CustomEngine(MDAEngine):
         (The sequence object needn't be used here if not necessary)
         """
         print('--> in setup_sequence')
-        gs.connect()
+        # gs.connect()
 
 
     def setup_event(self, event: useq.MDAEvent) -> None:
@@ -48,6 +49,7 @@ class CustomEngine(MDAEngine):
             self._smart_scan_setup(event.metadata)
         else:
             super().setup_event(event)
+            time.sleep(2)
 
     def exec_event(self, event: useq.MDAEvent) -> object:
         """Execute `event`.
@@ -61,7 +63,7 @@ class CustomEngine(MDAEngine):
 
     def teardown_sequence(self, sequence: useq.MDASequence):
         print('--> in teardown_sequence')
-        gs.disconnect()
+        # gs.disconnect()
 
 
     def _smart_scan_setup(self, metadata: dict) -> None:
@@ -70,6 +72,7 @@ class CustomEngine(MDAEngine):
 
         # Define a wrapper function for the scan operation
         def scan_task():
+            gs.connect()
             print("Starting scan task...")
             gs.scan(
                 mask=metadata[galvo_string][GalvoParams.SCAN_MASK],
@@ -80,6 +83,8 @@ class CustomEngine(MDAEngine):
                 timeout=metadata[galvo_string][GalvoParams.TIMEOUT]
             )
             print("Ending scan task.")
+            gs.disconnect()
+
 
         # Start the scan operation in a new thread
         scan_thread = threading.Thread(target=scan_task, daemon=False)
@@ -105,7 +110,7 @@ if __name__ == "__main__":
                     GalvoParams.PIXEL_SIZE : 2.56,
                     GalvoParams.STRATEGY: ScanningStragies.SNAKE,
                     GalvoParams.DURATION : 1,
-                    GalvoParams.TRIGGERED : True,
+                    GalvoParams.TRIGGERED : False,
                     GalvoParams.TIMEOUT : 10
                     }
             }
@@ -114,15 +119,15 @@ if __name__ == "__main__":
         useq.MDAEvent(
             metadata={
                 CustomKeyes.GALVO: {
-                    GalvoParams.SCAN_MASK: np.ones([3,3]),
-                    GalvoParams.PIXEL_SIZE : 0.1,
-                    GalvoParams.STRATEGY: ScanningStragies.SNAKE,
-                    GalvoParams.DURATION: 0.5,
+                    GalvoParams.SCAN_MASK: np.ones([40,40]),
+                    GalvoParams.PIXEL_SIZE : 2.56,
+                    GalvoParams.STRATEGY: ScanningStragies.RASTER,
+                    GalvoParams.DURATION : 0.7,
                     GalvoParams.TRIGGERED : False,
-                    GalvoParams.TIMEOUT : 2
+                    GalvoParams.TIMEOUT : 10
                     }
             }
         ),
-    ]
+        ]
 
     core.run_mda(experiment)

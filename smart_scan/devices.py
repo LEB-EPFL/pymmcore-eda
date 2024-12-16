@@ -84,7 +84,9 @@ class Galvo_Scanners(Device):
 
     
     def scan(self, mask:np.ndarray, pixelsize:float, scan_strategy:ScanningStragies = ScanningStragies.SNAKE, duration:float = 0.1, triggered:bool = True, timeout: int = 1):
-        """Performs a scan of the non_zero pixels in mask, with the selected scanning strategy and duration [s].
+        """Performs a scan of the non_zero pixels in a mask, with the selected scanning strategy and duration [s]. 
+        The x and y voltages are ouputted on the W1 and W2 pins, respectively.
+        The gating signal for the laser is output on DIO0.
         
         Input: 
         mask:           2D numpy array
@@ -209,7 +211,7 @@ class Galvo_Scanners(Device):
 
         sRun = 1.0 * data_x.size / rate
 
-        # Set the channel x
+        # Set the channel x on W1
         dwf.FDwfAnalogOutNodeEnableSet(hdwf, channel_x, 0, c_int(1))
         dwf.FDwfAnalogOutNodeFunctionSet(hdwf, channel_x, 0, c_int(31))  # funcPlay
         dwf.FDwfAnalogOutRepeatSet(hdwf, channel_x, c_int(1))
@@ -220,7 +222,7 @@ class Galvo_Scanners(Device):
         dwf.FDwfAnalogOutOffsetSet(hdwf, channel_x, c_double(2.5)) # output between 0 and 5 V
         dwf.FDwfAnalogOutTriggerSourceSet(hdwf, channel_x, c_byte(tr))  # 0: No trigger, 11: ExternalTrigger1
 
-        # Set the channel Y
+        # Set the channel Y on W2
         dwf.FDwfAnalogOutNodeEnableSet(hdwf, channel_y, 0, c_int(1))
         dwf.FDwfAnalogOutNodeFunctionSet(hdwf, channel_y, 0, c_int(31))  # funcPlay
         dwf.FDwfAnalogOutRepeatSet(hdwf, channel_y, c_int(1))
@@ -231,6 +233,22 @@ class Galvo_Scanners(Device):
         dwf.FDwfAnalogOutOffsetSet(hdwf, channel_y, c_double(2.5)) # output between 0 and 5 V
         dwf.FDwfAnalogOutTriggerSourceSet(hdwf, channel_y, c_byte(tr))  # 0: No trigger, 11: ExternalTrigger1
 
+
+        # # Set DIO voltage reference (3.3V or 5V, depending on your needs)
+        # high_voltage = 5  # Replace with 5.0 if using 5V logic
+        # dwf.FDwfAnalogIOChannelNodeSet(hdwf, c_int(0), c_int(0), c_double(high_voltage))
+
+        # Enable the Analog I/O subsystem
+        dwf.FDwfAnalogIOEnableSet(hdwf, c_int(1))
+
+        # Configure DIO0 to start with the trigger
+        dwf.FDwfDigitalOutEnableSet(hdwf, c_int(0), c_int(1))  # Enable DIO0 for DigitalOut
+        dwf.FDwfDigitalOutTypeSet(hdwf, c_int(0), c_int(0))  # Set function to constant
+        dwf.FDwfDigitalOutIdleSet(hdwf, c_int(0), c_int(1))  # Set idle to LOW (0)
+        dwf.FDwfDigitalOutCounterInitSet(hdwf, 0, 1, 0) # 1 = initialize with high when running
+        dwf.FDwfDigitalOutCounterSet(hdwf, 0, 0, 0) # low/high count zero, no toggle during run, constant
+
+        dwf.FDwfDigitalOutTriggerSourceSet(hdwf, c_int(tr))  # Trigger source: ExternalTrigger1
 
         # prime the buffers with the first chunk of data
         cBuffer_x = c_int(0)
@@ -248,6 +266,8 @@ class Galvo_Scanners(Device):
         # print("Configured buffer x size:", cBuffer_x.value)
         # print("Configured buffer y size:", cBuffer_y.value)
 
+        
+        # Arm the outputs
         dwf.FDwfAnalogOutNodeDataSet(hdwf, channel_x, 0, data_c_x, cBuffer_x)
         iPlay_x += cBuffer_x.value
         dwf.FDwfAnalogOutConfigure(hdwf, channel_x, c_int(1))
@@ -255,6 +275,9 @@ class Galvo_Scanners(Device):
         dwf.FDwfAnalogOutNodeDataSet(hdwf, channel_y, 0, data_c_y, cBuffer_y)
         iPlay_y += cBuffer_y.value
         dwf.FDwfAnalogOutConfigure(hdwf, channel_y, c_int(1))
+        
+        dwf.FDwfDigitalOutConfigure(hdwf, c_int(1)) 
+
 
         if triggered: 
             print("Waiting for trigger...")
@@ -337,7 +360,14 @@ class Galvo_Scanners(Device):
             if time.time() - start_t >= max_t:
                 print("Timeout")
                 break
-            
+        
+        dwf.FDwfDigitalOutCounterInitSet(hdwf, 0, 0, 0) # 1 = initialize with high when running
+        dwf.FDwfDigitalOutConfigure(hdwf, c_int(1))  # Apply the configuration
+        
+        
+        # # Set DIO0 low after the scan
+        # dwf.FDwfDigitalOutConfigure(hdwf, c_int(0))  # Turn off digital output
+
         # Final summary
         print(f"Final Play Position: iPlay_x={iPlay_x}, iPlay_y={iPlay_y}")
         print(f"Data Size: data_x.size={data_x.size}, data_y.size={data_y.size}")
