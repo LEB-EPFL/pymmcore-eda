@@ -13,9 +13,9 @@ from useq import Channel, MDASequence
 from pymmcore_eda.event_hub import EventHub
 
 mmc = CMMCorePlus()
-# mmc.setDeviceAdapterSearchPaths(
-#     ["C:/Program Files/Micro-Manager-2.0/", *list(mmc.getDeviceAdapterSearchPaths())]
-# )
+mmc.setDeviceAdapterSearchPaths(
+    ["C:/Program Files/Micro-Manager-2.0/", *list(mmc.getDeviceAdapterSearchPaths())]
+)
 mmc.loadSystemConfiguration("C:/Control_2/Zeiss-microscope/240715_ZeissAxioObserver7.cfg")
 mmc.mda.engine.use_hardware_sequencing = False
 mmc.setProperty("pE-800", "Global State", 1)
@@ -28,22 +28,38 @@ mmc.setProperty("pE-800", "SelectionH", 1)
 mmc.setProperty("pE-800", "IntensityH", 10)
 mmc.setConfig("Channel","mCherry (550nm)")
 
-#hub = EventHub(mmc.mda)
+# button actuator
+# queue_manager = QueueManager()
+
+# mda_sequence = MDASequence(
+#     channels=(Channel(config="GFP (470nm)",exposure=10),),
+#     time_plan={"interval": 3, "loops": 5},
+# )
+# base_actuator = MDAActuator(queue_manager, mda_sequence)
+# button_actuator = ButtonActuator(queue_manager)
+
+# mmc.run_mda(queue_manager.q_iterator)
+# base_actuator.thread.start()
+
+# button_actuator.thread.start()
+# base_actuator.thread.join()
+# button_actuator.thread.join()
+# queue_manager.stop_seq()
+
+# smart actuator
+hub = EventHub(mmc.mda)
 queue_manager = QueueManager()
 
-# analyser = Analyser(hub)
-# interpreter = Interpreter(hub)
+analyser = Analyser(hub)
+interpreter = Interpreter(hub)
 mda_sequence = MDASequence(
     channels=(Channel(config="GFP (470nm)",exposure=10),),
     time_plan={"interval": 3, "loops": 5},
 )
 base_actuator = MDAActuator(queue_manager, mda_sequence)
-button_actuator = ButtonActuator(queue_manager)
+smart_actuator = SmartActuator(queue_manager, hub)
 
 mmc.run_mda(queue_manager.q_iterator)
 base_actuator.thread.start()
-
-button_actuator.thread.start()
 base_actuator.thread.join()
-button_actuator.thread.join()
 queue_manager.stop_seq()

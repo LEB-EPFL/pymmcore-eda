@@ -5,8 +5,11 @@ from threading import Thread
 from typing import TYPE_CHECKING
 
 from useq import MDAEvent, Channel
+import numpy as np
 
 from pymmcore_eda._logger import logger
+from smart_scan.custom_engine import CustomKeyes, GalvoParams
+from smart_scan.helpers.function_helpers import ScanningStragies
 
 if TYPE_CHECKING:
     from event_hub import EventHub
@@ -56,6 +59,15 @@ class ButtonActuator:
                 self.queue_manager.register_event(event)
             logger.info(f"Button {button} pressed, events sent to queue manager")
 
+class MapStorage:
+    def __init__(self):
+        self.scan_map = np.zeros((2048, 2048))
+
+    def save_map(self, map):
+        self.scan_map = map
+
+    def get_map(self):
+        return self.scan_map
 
 class SmartActuator:
     """Actuator that subscribes to new_interpretation and reacts to incoming events."""
@@ -64,9 +76,30 @@ class SmartActuator:
         self.queue_manager = queue_manager
         self.hub = hub
         self.hub.new_interpretation.connect(self._act)
+        self.storage = MapStorage()
 
     def _act(self, image, event, metadata):
-        if event.index.get("t", 0) % 2 == 0:
-            event = MDAEvent(index={"t": -1, "c": 2}, min_start_time=0)
-            self.queue_manager.register_event(event)
-            logger.info(f"SmartActuator sent {event}")
+        scan_map = self.storage.get_map()
+        if np.sum(image) != 0:
+            # check if we've already picked up this event
+            map_diff = np.sum(np.abs(np.int8(image) - np.int8(scan_map)))
+            if map_diff > np.size(image) * 0.1:
+                print('DIFFERENT MAPS')
+                for i in range(1,4):
+                    event = MDAEvent(channel={"config":"mCherry (550nm)", "exposure": 10.}, 
+                                    index={"t": -i, "c": 2}, 
+                                    min_start_time=0,
+                                    metadata={
+                                        CustomKeyes.GALVO: {
+                                            GalvoParams.SCAN_MASK: image,
+                                            #GalvoParams.PIXEL_SIZE : 0.1,
+                                            GalvoParams.STRATEGY: ScanningStragies.SNAKE,
+                                            #GalvoParams.DURATION : 1,
+                                            #GalvoParams.TRIGGERED : True,
+                                            #GalvoParams.TIMEOUT : 2
+                                        }})
+                    self.queue_manager.register_event(event)
+                scan_map = image
+            else:
+                print('SAME MAPS')
+            self.storage.save_map(scan_map)
