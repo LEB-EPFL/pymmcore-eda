@@ -7,11 +7,25 @@ class instrumentSettings(metaclass=Singleton):
 
     def __init__(self) -> None:
         self._galvo_calibration = instrSettDefault.GALVO_CALIBRATION
+        self._galvo_maxV = instrSettDefault.GALVO_MAXV
+        self._galvo_minV = instrSettDefault.GALVO_MINV
+        self._maxRate = instrSettDefault.MAX_RATE
 
     @property
     def galvo_calibration(self):
         return self._galvo_calibration
-
-    # @galvo_calibration.setter
-    # def slm(self, value):
-    #     self._galvo_calibration = value
+    
+    @property
+    def galvo_maxV(self):
+        """The maximum V for the galvo mirrors [V]"""
+        return self._galvo_maxV
+    
+    @property
+    def galvo_minV(self):
+        """The minimum V for the galvo mirrors [V]"""
+        return self._galvo_minV
+    
+    @property
+    def maxRate(self):
+        """The maximum rate for the output [Hz]"""
+        return self._maxRate
