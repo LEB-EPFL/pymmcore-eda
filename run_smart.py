@@ -18,11 +18,10 @@ mmc.setDeviceAdapterSearchPaths(
 )
 mmc.loadSystemConfiguration()
 
-# from smart_scan.custom_engine import CustomEngine
-# mmc.mda.set_engine(CustomEngine(mmc))
+from smart_scan.custom_engine import CustomEngine
+mmc.mda.set_engine(CustomEngine(mmc))
 
-mmc.mda.engine.use_hardware_sequencing = False # ref. custom engine
-
+mmc.mda.engine.use_hardware_sequencing = False 
 
 hub = EventHub(mmc.mda)
 queue_manager = QueueManager()
@@ -31,7 +30,7 @@ analyser = Analyser(hub)
 interpreter = Interpreter(hub)
 mda_sequence = MDASequence(
     channels=(Channel(config="GFP (470nm)",exposure=10),),
-    time_plan={"interval": 3, "loops": 8},
+    time_plan={"interval": 5, "loops": 6},
 )
 base_actuator = MDAActuator(queue_manager, mda_sequence)
 smart_actuator = SmartActuator(queue_manager, hub)

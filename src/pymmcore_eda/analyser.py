@@ -67,6 +67,7 @@ class Analyser:
         self.metadata = metadata
         if self.event.index.get("c", 0) != 0:
             return
+        logger.info('Fake data going in')
         self.img = self.dummy_data[self.event.index.get("t", 0)]
         self.images[-1] = self.img
         
@@ -74,6 +75,7 @@ class Analyser:
             if self.event.index.get("t", 0) < 2:
                 return
             else:
+                logger.info('PREDICTING')
                 input = self.images.swapaxes(0,2)
                 input = np.expand_dims(input, 0)
                 output = self.model.predict(input)

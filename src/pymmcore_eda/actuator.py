@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from useq import MDAEvent, Channel
 import numpy as np
+from PIL import Image
 
 from pymmcore_eda._logger import logger
 from smart_scan.custom_engine import CustomKeyes, GalvoParams
@@ -81,24 +82,43 @@ class SmartActuator:
     def _act(self, image, event, metadata):
         scan_map = self.storage.get_map()
         if np.sum(image) != 0:
+            
             # check if we've already picked up this event
             map_diff = np.sum(np.abs(np.int8(image) - np.int8(scan_map)))
             if map_diff > np.size(image) * 0.1:
                 print('DIFFERENT MAPS')
-                for i in range(1,4):
-                    event = MDAEvent(channel={"config":"mCherry (550nm)", "exposure": 10.}, 
-                                    index={"t": -i, "c": 2}, 
-                                    min_start_time=0,
-                                    metadata={
-                                        CustomKeyes.GALVO: {
-                                            GalvoParams.SCAN_MASK: image,
-                                            #GalvoParams.PIXEL_SIZE : 0.1,
-                                            GalvoParams.STRATEGY: ScanningStragies.SNAKE,
-                                            #GalvoParams.DURATION : 1,
-                                            #GalvoParams.TRIGGERED : True,
-                                            #GalvoParams.TIMEOUT : 2
-                                        }})
-                    self.queue_manager.register_event(event)
+                # for i in range(1,4):
+                #     event = MDAEvent(channel={"config":"mCherry (550nm)", "exposure": 10.}, 
+                #                     index={"t": -i, "c": 2}, 
+                #                     min_start_time=0,
+                #                     metadata={
+                #                         CustomKeyes.GALVO: {
+                #                             GalvoParams.SCAN_MASK: image,
+                #                             GalvoParams.PIXEL_SIZE : 0.05,
+                #                             GalvoParams.STRATEGY: ScanningStragies.SNAKE,
+                #                             GalvoParams.DURATION : 1,
+                #                             GalvoParams.TRIGGERED : False,
+                #                             GalvoParams.TIMEOUT : 5
+                #                         }})
+                #     self.queue_manager.register_event(event)
+
+                mask = Image.fromarray(image.copy())
+                mask = mask.resize((128, 128))
+                mask = np.array(mask)
+
+                event = MDAEvent(channel={"config":"mCherry (550nm)", "exposure": 10.}, 
+                                index={"t": -1, "c": 2}, 
+                                min_start_time=0,
+                                metadata={
+                                    CustomKeyes.GALVO: {
+                                        GalvoParams.SCAN_MASK: mask,
+                                        GalvoParams.PIXEL_SIZE : 1,
+                                        GalvoParams.STRATEGY: ScanningStragies.SNAKE,
+                                        GalvoParams.DURATION : 1,
+                                        GalvoParams.TRIGGERED : True,
+                                        GalvoParams.TIMEOUT : 10
+                                    }})
+                self.queue_manager.register_event(event)
                 scan_map = image
             else:
                 print('SAME MAPS')
