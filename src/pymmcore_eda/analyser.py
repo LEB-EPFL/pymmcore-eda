@@ -8,7 +8,7 @@ from tensorflow import keras
 import tensorflow as tf
 from threading import Thread
 
-from pymmcore_eda._logger import logger
+from src.pymmcore_eda._logger import logger
 
 if TYPE_CHECKING:
     import numpy as np
@@ -59,7 +59,15 @@ class Analyser:
         print("Model loaded")
         self.images = np.zeros((3, 2048, 2048))
 
-        self.dummy_data = imread(Path("C:/Users/kasia/Desktop/epfl/stk_0010_FOV_1_MMStack_Default.ome.tif"))
+        self.dummy_data = imread(Path("C:/Users/glinka/Desktop/stk_0010_FOV_1_MMStack_Default.ome.tif"))
+
+        # Test: to load cuDNN version 8100
+        img = self.dummy_data[0:3]
+        input = img.swapaxes(0,2)
+        input = np.expand_dims(input, 0)
+        self.model.predict(input)
+        # Test: to load cuDNN version 8100
+
 
     def _analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict):
         self.img = img
@@ -79,6 +87,7 @@ class Analyser:
                 input = self.images.swapaxes(0,2)
                 input = np.expand_dims(input, 0)
                 output = self.model.predict(input)
+                # output = np.ones((1, 2048, 2048, 1))
                 output = output[0, :, :, 0]
                 #print('MAX', np.max(output))
             self.images[:-1] = self.images[1:]
