@@ -66,6 +66,7 @@ class Analyser:
         input = img.swapaxes(0,2)
         input = np.expand_dims(input, 0)
         self.model.predict(input)
+        print('FAKE PREDICTION MADE')
         # Test: to load cuDNN version 8100
 
 

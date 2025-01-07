@@ -89,7 +89,7 @@ class SmartActuator:
                 print('DIFFERENT MAPS')
                 # for i in range(1,4):
                 #     event = MDAEvent(channel={"config":"mCherry (550nm)", "exposure": 10.}, 
-                #                     index={"t": -i, "c": 2}, 
+                #                     index={"t": -i, "c": 1}, 
                 #                     min_start_time=0,
                 #                     metadata={
                 #                         CustomKeyes.GALVO: {
@@ -107,7 +107,7 @@ class SmartActuator:
                 mask = np.array(mask)
 
                 event = MDAEvent(channel={"config":"mCherry (550nm)", "exposure": 10.}, 
-                                index={"t": -1, "c": 2}, 
+                                index={"t": -1, "c": 1}, 
                                 min_start_time=0,
                                 metadata={
                                     CustomKeyes.GALVO: {

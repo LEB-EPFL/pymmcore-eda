@@ -25,7 +25,6 @@ class Interpreter:
         logger.info("Interpreter")
         mask = net_out > InterpreterSettings.threshold
         coordinates = np.argwhere(mask)
-        print(coordinates)
         for coord in coordinates:
             x, y = coord[0], coord[1]
             mask[x - InterpreterSettings.square_size : x + InterpreterSettings.square_size, y - InterpreterSettings.square_size : y + InterpreterSettings.square_size] = 1

@@ -60,7 +60,6 @@ class QueueManager:
         self.event_register[event.min_start_time]["events"].append(event)
         if self.event_register[event.min_start_time]["timer"] is None:
             self._set_timer_for_event(event)
-        # print(self.event_register)
 
         for k, v in event.index.items():
             self._axis_max[k] = max(self._axis_max.get(k, 0), v)
