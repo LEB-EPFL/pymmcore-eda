@@ -8,6 +8,8 @@ from tensorflow import keras
 import tensorflow as tf
 from threading import Thread
 
+from smart_scan.helpers.function_helpers import normalize_tilewise_vectorized
+
 from src.pymmcore_eda._logger import logger
 
 if TYPE_CHECKING:
@@ -70,7 +72,15 @@ class Analyser:
 
 
     def _analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict):
-        self.img = img
+        
+        # tile-wise normalisation of the image
+        tile_size = 128
+        try:
+            self.img = normalize_tilewise_vectorized(arr=img, tile_size=tile_size)
+        except AssertionError as e:
+            self.img = img
+            logger.info(f"Analyser: failed to perform tile-wise normalisation. {e}")
+        
         self.event = event
         self.metadata = metadata
         if self.event.index.get("c", 0) != 0:
