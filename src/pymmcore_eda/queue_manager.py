@@ -3,8 +3,9 @@ from __future__ import annotations
 from queue import Queue
 from threading import Timer
 from typing import TYPE_CHECKING
+import numpy as np
 
-from pymmcore_eda.time_machine import TimeMachine
+from src.pymmcore_eda.time_machine import TimeMachine
 
 if TYPE_CHECKING:
     from useq import MDAEvent
@@ -35,6 +36,7 @@ class QueueManager:
 
     def register_event(self, event):
         """Actuators call this to request an event to be put on the event_register."""
+        
         # Offset index
         if event.index.get("t", 0) < 0:
             keys = list(self.event_register.keys())
@@ -45,6 +47,7 @@ class QueueManager:
                 start = keys[-1]
             else:
                 start = keys[abs(event.index.get("t", 0))-1]
+            
             event = event.replace(min_start_time=start)
 
         # Offset time
@@ -54,6 +57,20 @@ class QueueManager:
             )
             event = event.replace(min_start_time=start)
 
+        # "summing" masks:
+        if event.index.get("c", 0) != 0:
+            if len(self.event_register) != 0:
+                events = self.event_register[event.min_start_time]["events"].copy()
+                for i, event_i in enumerate(events):
+                    if event_i.index.get('c',0) == event.index.get('c',0):
+                        copied_map = event_i.metadata.get('0',0)[0]
+                        current_map = event.metadata.get('0',0)[0]
+                        new_map = np.logical_or(copied_map, current_map)
+                        new_metadata = event.metadata.copy()
+                        new_metadata['0'][0] = new_map
+                        event = event.replace(metadata=new_metadata)
+                        del self.event_register[event.min_start_time]['events'][i]
+        
         if event.min_start_time not in self.event_register.keys():
             self.event_register[event.min_start_time] = {"timer": None, "events": []}
 
