@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 import numpy as np
-from tifffile import imread
+from tifffile import imread, imwrite
 from pathlib import Path
 from tensorflow import keras
 import tensorflow as tf
 from threading import Thread
+
+from PIL import Image
 
 from src.pymmcore_eda._logger import logger
 
@@ -16,7 +18,7 @@ if TYPE_CHECKING:
     from useq import MDAEvent
 
 class AnalyserSettings:
-    model_path: str = "//sb-nas1.rcp.epfl.ch/leb/Scientific_projects/deep_events_WS/data/original_data/training_data/20240826_1134_brightfield_cos7_n3_f1/20240826_1134_0_model.h5"
+    model_path: str = "//sb-nas1.rcp.epfl.ch/leb/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
 
 @tf.keras.utils.register_keras_serializable(package='deep_events', name='wmse_loss')
 class WMSELoss(tf.keras.losses.Loss):
@@ -57,31 +59,37 @@ class Analyser:
         self.hub.frameReady.connect(self._analyse)
         self.model = keras.models.load_model(settings.model_path)
         print("Model loaded")
-        self.images = np.zeros((3, 2048, 2048))
+        self.images = np.zeros((5, 2048, 2048))
 
-        self.dummy_data = imread(Path("C:/Users/glinka/Desktop/stk_0010_FOV_1_MMStack_Default.ome.tif"))
-
-        # Test: to load cuDNN version 8100
-        img = self.dummy_data[0:3]
+        # Perform a first fake prediction - takes a long time 
+        # self.dummy_data = imread(Path("C:/Users/glinka/Desktop/stk_0010_FOV_1_MMStack_Default.ome.tif"))
+        # img = self.dummy_data[0:3]
+        
+        img = self.images
         input = img.swapaxes(0,2)
         input = np.expand_dims(input, 0)
         self.model.predict(input)
-        print('FAKE PREDICTION MADE')
-        # Test: to load cuDNN version 8100
 
 
     def _analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict):
-        self.img = img
+        
+        print(f"Max value: {np.max(img)}")
+
+        img = img - np.min(img)
+        self.img = np.divide(img,np.max(img))
+
         self.event = event
         self.metadata = metadata
         if self.event.index.get("c", 0) != 0:
             return
-        logger.info('Fake data going in')
-        self.img = self.dummy_data[self.event.index.get("t", 0)]
+        
+        # logger.info('Fake data going in')
+        # self.img = self.dummy_data[self.event.index.get("t", 0)]
+
         self.images[-1] = self.img
         
         def predict():
-            if self.event.index.get("t", 0) < 2:
+            if self.event.index.get("t", 0) < 4:
                 return
             else:
                 logger.info('PREDICTING')
@@ -90,7 +98,7 @@ class Analyser:
                 output = self.model.predict(input)
                 # output = np.ones((1, 2048, 2048, 1))
                 output = output[0, :, :, 0]
-                #print('MAX', np.max(output))
+                print('MAX', np.max(output))
             self.images[:-1] = self.images[1:]
             logger.info("Analyser")
             self.hub.new_analysis.emit(output, event, metadata)
