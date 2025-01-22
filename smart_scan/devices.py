@@ -128,8 +128,8 @@ class Galvo_Scanners(Device):
             n_samples = len(voltages_x)
             rate = n_samples/duration # Hz
 
-            print(f'duration: {duration}')
-            print(f'rate: {rate}')
+            # print(f'duration: {duration}')
+            # print(f'rate: {rate}')
 
             if rate < self._maxRate:
                 # Ouputs the voltages
@@ -169,18 +169,18 @@ class Galvo_Scanners(Device):
         """Normalises and prepare the voltage to be later ouputted."""
         voltage_f = voltage.astype(np.float64)
         if np.dtype(voltage[0]) == np.int8 or np.dtype(voltage[0]) == np.uint8:
-            print("Scaling: UINT8")
+            # print("Scaling: UINT8")
             voltage_f /= 128.0
             voltage_f -= 1.0
         elif np.dtype(voltage[0]) == np.int16:
-            print("Scaling: INT16")
+            # print("Scaling: INT16")
             voltage_f /= 32768.0
         elif np.dtype(voltage[0]) == np.uint16:
-            print("Scaling: UINT16")
+            # print("Scaling: UINT16")
             voltage_f /= 16384.0
             voltage_f -= 1.0
         elif np.dtype(voltage[0]) == np.int32:
-            print("Scaling: INT32")
+            # print("Scaling: INT32")
             voltage_f /= 2147483648.0
         
         return (ctypes.c_double * len(voltage_f))(*voltage_f)
@@ -369,8 +369,8 @@ class Galvo_Scanners(Device):
         # dwf.FDwfDigitalOutConfigure(hdwf, c_int(0))  # Turn off digital output
 
         # Final summary
-        print(f"Final Play Position: iPlay_x={iPlay_x}, iPlay_y={iPlay_y}")
-        print(f"Data Size: data_x.size={data_x.size}, data_y.size={data_y.size}")
+        # print(f"Final Play Position: iPlay_x={iPlay_x}, iPlay_y={iPlay_y}")
+        # print(f"Data Size: data_x.size={data_x.size}, data_y.size={data_y.size}")
 
 
     # def _ouput_voltages_trg(self, voltage_x, voltage_y, n_voltage_x, n_voltage_y, rate):
