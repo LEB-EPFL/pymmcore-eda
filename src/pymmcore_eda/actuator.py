@@ -86,26 +86,17 @@ class SmartActuator:
             # check if we've already picked up this event
             map_diff = np.sum(np.abs(np.int8(image) - np.int8(scan_map)))
             if True:
-            # if np.random.rand() > 0.8:
             # if map_diff > np.size(image) * 0.1:
                
                 # Insert fake mask
                 # mask = np.zeros((2048, 2048))
                 # mask[1200:1600,600:1000] = 1
                 # mask = Image.fromarray(mask.copy())
-
                 # image[1024:1500, 1024:1500] = 0
 
-                # mask = np.zeros((2048, 2048))
-                # mask[1100:1200,1100:1200] = 1
-
-
                 mask = Image.fromarray(image.copy())
-
                 mask = mask.resize((124, 124))
-
                 mask = np.array(mask, dtype=bool)
-                # Image.fromarray(mask).save("C:/Users/glinka/Desktop/pymmcore-eda/test_data/mask.png")
                 h = mask.shape[0]
                 ps = 102.4 / h # pixel size so that the total field of view is ~ 100 x 100 µm2
                 print('DIFFERENT MAPS \n')
@@ -126,21 +117,6 @@ class SmartActuator:
                                         }})
                     self.queue_manager.register_event(event)
 
-
-                # event = MDAEvent(channel={"config":"DAPI (365nm)", "exposure": 500}, 
-                #                 index={"t": -1, "c": 1}, 
-                #                 min_start_time=0,
-                #                 metadata={
-                #                     CustomKeyes.GALVO: {
-                #                         GalvoParams.SCAN_MASK: mask,
-                #                         GalvoParams.PIXEL_SIZE : 0.05,
-                #                         GalvoParams.STRATEGY: ScanningStragies.SNAKE,
-                #                         GalvoParams.DURATION : 0.5,
-                #                         GalvoParams.TRIGGERED : True,
-                #                         GalvoParams.TIMEOUT : 10
-                #                     }})
-                # self.queue_manager.register_event(event)
-                
                 scan_map = image
             else:
                 print('SAME MAPS\n')
