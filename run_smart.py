@@ -55,7 +55,7 @@ writer = AdaptiveWriter(path=loc, delete_existing=True)
 
 hub = EventHub(mmc.mda)
 queue_manager = QueueManager()
-analyser = Analyser(hub)
+analyser = Analyser(hub, writer)
 interpreter = Interpreter(hub)
 
 mda_sequence = MDASequence(
