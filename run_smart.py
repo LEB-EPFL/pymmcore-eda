@@ -33,17 +33,24 @@ mmc.setProperty("Prime", "Trigger-Expose Out-Mux", 1)
 mmc.setProperty("Prime", "ExposeOutMode", "All Rows")
 mmc.setChannelGroup("Channel")
 
-mmc.setProperty("pE-800", "Global State", 1)
-mmc.setProperty("pE-800", "SelectionC", 1)
-mmc.setProperty("pE-800", "IntensityC", 10)
-mmc.setConfig("Channel","GFP (470nm)")
+mmc.setProperty("pE-800", "Global State", 0)
+# mmc.setProperty("pE-800", "SelectionC", 1)
+# mmc.setProperty("pE-800", "IntensityC", 10)
+# mmc.setProperty('Multi Shutter', 'Physical Shutter 1', 'ZeissReflectedLightShutter')
+# mmc.setProperty('Multi Shutter', 'Physical Shutter 2', 'pE-800')
+# mmc.setProperty('Core', 'Shutter', 'ZeissTransmittedLightShutter')
+# mmc.setProperty('Core', 'Shutter', 'Multi Shutter')
+mmc.setConfig("Channel","Brightfield")
 
-mmc.setProperty("pE-800", "Global State", 1)
-mmc.setProperty("pE-800", "SelectionH", 1)
-mmc.setProperty("pE-800", "IntensityH", 10)
-mmc.setConfig("Channel","mCherry (550nm)")
+mmc.setProperty("pE-800", "Global State", 0)
+# mmc.setProperty("pE-800", "SelectionA", 1)
+# mmc.setProperty("pE-800", "IntensityA", 10)
+# mmc.setProperty('Multi Shutter', 'Physical Shutter 1', 'ZeissReflectedLightShutter')
+# mmc.setProperty('Multi Shutter', 'Physical Shutter 2', 'pE-800')
+# mmc.setProperty('Core', 'Shutter', 'Multi Shutter')
+mmc.setConfig("Channel","DAPI (365nm)")
 
-loc = Path(__file__).parent / "test_data/test.ome.zarr"
+loc = Path(__file__).parent / "test_data/Cos7_biotrkBlue_3600frames_1s_smart_05.ome.zarr"
 writer = AdaptiveWriter(path=loc, delete_existing=True)
 
 hub = EventHub(mmc.mda)
@@ -52,8 +59,8 @@ analyser = Analyser(hub)
 interpreter = Interpreter(hub)
 
 mda_sequence = MDASequence(
-    channels=(Channel(config="GFP (470nm)",exposure=1000),),
-    time_plan={"interval": 5, "loops": 7},
+    channels=(Channel(config="Brightfield",exposure=100),),
+    time_plan={"interval": 1, "loops": 3600},
 )
 mmc.mda._reset_event_timer()
 queue_manager.time_machine._t0 = time.perf_counter()
