@@ -8,11 +8,11 @@ if TYPE_CHECKING:
     import numpy as np
     from event_hub import EventHub
     from useq import MDAEvent
-from pymmcore_eda._logger import logger
+from src.pymmcore_eda._logger import logger
 
 class InterpreterSettings:
-    threshold: float = 0.999
-    square_size: int = 50 #px
+    threshold: float = 0.9
+    square_semi_size: int = 60 #px
 
 class Interpreter:
     """Get event score and produce a binary image that informs the actuator."""
@@ -27,6 +27,7 @@ class Interpreter:
         coordinates = np.argwhere(mask)
         for coord in coordinates:
             x, y = coord[0], coord[1]
-            mask[x - InterpreterSettings.square_size : x + InterpreterSettings.square_size, y - InterpreterSettings.square_size : y + InterpreterSettings.square_size] = 1
+            mask[x - InterpreterSettings.square_semi_size : x + InterpreterSettings.square_semi_size, y - InterpreterSettings.square_semi_size : y + InterpreterSettings.square_semi_size] = 1
+        
         self.hub.new_interpretation.emit(mask, event, metadata)
     
