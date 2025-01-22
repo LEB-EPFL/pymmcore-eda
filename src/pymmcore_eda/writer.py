@@ -62,11 +62,11 @@ class AdaptiveWriter(TensorStoreHandler):
     def frameReady(
             self, frame: np.ndarray, event: useq.MDAEvent, meta: FrameMetaV1
         ) -> None:
-        # event = event.replace(metadata = {})
-        if event.index.get("c", 0) != 0:
+        if event.index.get("c", 0) == 1:
             new_metadata = event.metadata.copy()
             new_metadata['0'][0] = json.dumps({'0': event.metadata['0'][0].tolist()})
             event = event.replace(metadata = new_metadata)
+            # event = event.replace(metadata = {})
             meta['mda_event'] = meta['mda_event'].replace(metadata = {})
         super().frameReady(frame, event, meta)
 
