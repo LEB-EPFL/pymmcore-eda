@@ -7,6 +7,7 @@ from pathlib import Path
 from tensorflow import keras
 import tensorflow as tf
 from threading import Thread
+from pymmcore_plus.metadata.schema import FrameMetaV1
 
 from smart_scan.helpers.function_helpers import normalize_tilewise_vectorized
 
@@ -114,7 +115,9 @@ class Analyser:
                 # Call writer.frameReady() to store the network output
                 output_save = np.array(output*1e4)
                 output_save = output_save.astype('uint16')
-                self.writer.frameReady(frame = output_save, event=fake_event, meta={})
+
+                meta = FrameMetaV1(fake_event)
+                self.writer.frameReady(frame = output_save, event=fake_event, meta=meta)
 
             self.images[:-1] = self.images[1:]
             logger.info("Analyser")
