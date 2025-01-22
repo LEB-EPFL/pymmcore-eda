@@ -62,7 +62,7 @@ class CustomEngine(MDAEngine):
         This method is called once at the beginning of a sequence.
         (The sequence object needn't be used here if not necessary)
         """
-        print('--> in setup_sequence')
+        # print('--> in setup_sequence')
         self._gs.connect()
 
 
@@ -74,11 +74,15 @@ class CustomEngine(MDAEngine):
         The engine should be in a state where it can call `exec_event`
         without any additional preparation.
         """
-        print('--> in setup_event')
+        # print('--> in setup_event')
         
         if str(CustomKeyes.GALVO.value) in event.metadata:
-            super().setup_event(event)
             self._smart_scan_setup(event.metadata)
+            
+            # Delay to allow the scan to be triggered by the camera
+            time.sleep(0.1)
+            
+            super().setup_event(event)
         else:
             super().setup_event(event)
 
@@ -89,16 +93,16 @@ class CustomEngine(MDAEngine):
         executing the event. The default assumption is to acquire an image,
         but more elaborate events will be possible.
         """
-        print('--> in exec_event')
+        # print('--> in exec_event')
         return super().exec_event(event)
 
     def teardown_sequence(self, sequence: useq.MDASequence):
-        print('--> in teardown_sequence')
-        # self._gs.disconnect()
+        # print('--> in teardown_sequence')
+        self._gs.disconnect()
 
 
     def _smart_scan_setup(self, metadata: dict) -> None:
-        print(f"--> Setting up the galvanometric mirrors")
+        # print(f"--> Setting up the galvanometric mirrors")
         galvo_string = str(CustomKeyes.GALVO.value)
 
         # Define a wrapper function for the scan operation
@@ -112,7 +116,6 @@ class CustomEngine(MDAEngine):
                 triggered=metadata[galvo_string][GalvoParams.TRIGGERED],
                 timeout=metadata[galvo_string][GalvoParams.TIMEOUT]
             )
-            self._gs.disconnect()
             print("Ending scan task.")
 
 
