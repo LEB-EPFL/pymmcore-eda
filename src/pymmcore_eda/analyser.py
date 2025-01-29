@@ -21,8 +21,7 @@ if TYPE_CHECKING:
     
 
 class AnalyserSettings:
-    model_path: str = "//sb-nas1.rcp.epfl.ch/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
-
+    model_path: str = "/Volumes/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
 
 @tf.keras.utils.register_keras_serializable(package='deep_events', name='wmse_loss')
 class WMSELoss(tf.keras.losses.Loss):
@@ -54,6 +53,71 @@ class WBCELoss(tf.keras.losses.Loss):
         return {'pos_weight': self.pos_weight}    
 tf.keras.utils.get_custom_objects().update({'WBCELoss': WBCELoss})
 
+def emit_writer_signal(hub, event: MDAEvent, output, custom_channel : int = 2):
+    """
+    Emit the new_writer_frame signal.
+
+    Parameters:
+    hub (EventHub): The event hub to emit the signal.
+    event (MDAEvent): The event containing t_index and metadata about the frame.
+    output (np.ndarray): The output data to be emitted.
+    custom_channel (int, optional): The custom channel index. Defaults to 2.
+    """
+    t_index = event.index.get("t", 0)
+    
+    fake_event = MDAEvent(channel=event.channel, index={"t": t_index, "c": custom_channel}, min_start_time=0)
+    
+    output_save = np.array(output*1e4)
+
+    output_save[0:256, 0:256] = 500
+
+    output_save = np.transpose(output_save)
+    output_save = output_save.astype('uint16')
+    meta = FrameMetaV1(fake_event)
+
+    hub.new_writer_frame.emit(output_save, fake_event, meta)
+
+
+class Dummy_Analyser:
+    """Analyse the image and produce a map for the interpreter."""
+    
+    def __init__(self, hub: EventHub):
+        self.hub = hub
+        self.hub.frameReady.connect(self._analyse)
+
+    def _analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict):
+
+        if event.index.get("c", 0) != 0:
+            return
+
+        # Determine the maximum possible value based on dtype
+        dtype = img.dtype
+        max_value = 1 
+        if np.issubdtype(dtype, np.integer):
+            max_value = np.iinfo(dtype).max
+        elif np.issubdtype(dtype, np.floating):
+            max_value = np.finfo(dtype).max
+
+        img[200,200] = 65520
+
+        # normalise and filter the image
+        img_norm = img/max_value
+        
+        threshold = 0.1
+        img_norm[img_norm <= threshold] = 0
+        
+        output = img_norm
+        print(f'Event score max: {np.max(output)}')
+        print(f'Event score min: {np.min(output)}')
+
+        # Emit the event score
+        self.hub.new_analysis.emit(output, event, metadata)
+
+        # Emit new_writer_frame to store the network output
+        emit_writer_signal(self.hub, event, output)
+
+        logger.info("Dummy Analyser")
+
 class Analyser:
     """Analyse the image and produce an event score map for the interpreter."""
 
@@ -82,9 +146,6 @@ class Analyser:
         self.model.predict(input_cropped)
         self.model.predict(input_cropped)
         self.model.predict(input_cropped)
-
-
-
 
     def _analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict):
         
@@ -119,22 +180,13 @@ class Analyser:
             output = np.zeros((2048, 2048))
             output[512:1536, 512:1536] = output_cropped
             print(f'Maximum value of the model output: {np.max(output)}\n')
-            # Write the network output output
-            # Generate a fake event and modify its channel
+            
+            # Emits new_analysis signal
             self.hub.new_analysis.emit(output, event, metadata)
             
-            t_index = self.event.index.get("t", 0)
-            custom_channel = 2
-            fake_event = MDAEvent(channel=self.event.channel, index={"t": t_index, "c": custom_channel}, min_start_time=0)
-            
-            # Call writer.frameReady() to store the network output
-            output_save = np.array(output*1e4)
-            output_save = np.transpose(output_save)
-            output_save = output_save.astype('uint16')
+            # Emits new_writer_frame signal to store the network output
+            emit_writer_signal(self.hub, event, output)
 
-            meta = FrameMetaV1(fake_event)
-            # self.writer.frameReady(frame = output_save, event=fake_event, meta=meta)
-            self.hub.new_writer_frame.emit(output_save, fake_event, meta)
             logger.info("Analyser")
 
 
