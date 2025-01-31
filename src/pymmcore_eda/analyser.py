@@ -21,10 +21,7 @@ if TYPE_CHECKING:
     
 
 class AnalyserSettings:
-    # model_path: str = "//sb-nas1.rcp.epfl.ch/leb/Scientific_projects/deep_events_WS/data/original_data/training_data/20250109_1956_brightfield_cos7_t0.2_f1_sFalse_mito_events_n753_sFalse/20250109_1956_1_model.h5"
-    
-    # LSTM model
-    model_path: str = "Z:/Scientific_projects/deep_events_WS/data/original_data/training_data/20250106_1954_brightfield_cos7_t0.2_f1_sFalse_mito_events_n753_sFalse/20250106_1954_0_model.h5"
+    model_path: str = "//sb-nas1.rcp.epfl.ch/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
 
 
 @tf.keras.utils.register_keras_serializable(package='deep_events', name='wmse_loss')
@@ -60,7 +57,7 @@ tf.keras.utils.get_custom_objects().update({'WBCELoss': WBCELoss})
 class Analyser:
     """Analyse the image and produce an event score map for the interpreter."""
 
-    def __init__(self, hub: EventHub, writer: AdaptiveWriter):
+    def __init__(self, hub: EventHub):
         settings = AnalyserSettings()
         self.hub = hub
         self.hub.frameReady.connect(self._analyse)
@@ -68,7 +65,7 @@ class Analyser:
         print("Model loaded")
         
         # Needed to write the network output on another channel
-        self.writer = writer
+        # self.writer = writer
         
         self.images = np.zeros((5, 2048, 2048))
         # self.dummy_data = imread(Path("C:/Users/glinka/Desktop/stk_0010_FOV_1_MMStack_Default.ome.tif"))
@@ -106,59 +103,41 @@ class Analyser:
         
         # logger.info('Fake data going in')
         # self.img = self.dummy_data[self.event.index.get("t", 0)]
-
         self.images[-1] = self.img
 
-        def predict():
+        def predict(images):
             if self.event.index.get("t", 0) < 4:
                 return
-            else:
-                logger.info('PREDICTING')
-                input = self.images.swapaxes(0,2)
-                input = np.expand_dims(input, 0)
+            logger.info('PREDICTING')
+            input = images.swapaxes(0,2)
+            input = np.expand_dims(input, 0)
+            input_cropped = input[:, 512:1536, 512:1536, :]
+        
+            output_cropped = self.model.predict(input_cropped)
+            output_cropped = output_cropped[0, :, :, 0]
+            
+            output = np.zeros((2048, 2048))
+            output[512:1536, 512:1536] = output_cropped
+            print(f'Maximum value of the model output: {np.max(output)}\n')
+            # Write the network output output
+            # Generate a fake event and modify its channel
+            self.hub.new_analysis.emit(output, event, metadata)
+            
+            t_index = self.event.index.get("t", 0)
+            custom_channel = 2
+            fake_event = MDAEvent(channel=self.event.channel, index={"t": t_index, "c": custom_channel}, min_start_time=0)
+            
+            # Call writer.frameReady() to store the network output
+            output_save = np.array(output*1e4)
+            output_save = np.transpose(output_save)
+            output_save = output_save.astype('uint16')
 
-                # Crop all the images to haste prediction
-                input_cropped = input[:, 512:1536, 512:1536, :]
-                # input_cropped = input[:, 768:1280, 768:1280, :]
-
-                output_cropped = self.model.predict(input_cropped)
-                output_cropped = output_cropped[0, :, :, 0]
-                
-                output = np.zeros((2048, 2048))
-                output[512:1536, 512:1536] = output_cropped
-                # output[768:1280, 768:1280] = output_cropped
-
-
-                # Original prediction
-                # output = self.model.predict(input)
-                # output = output[0, :, :, 0]
-
-                print(f'Maximum value of the model output: {np.max(output)}\n')
-
-                self.images[:-1] = self.images[1:]
-                logger.info("Analyser")
-                self.hub.new_analysis.emit(output, event, metadata)
-                
-                # Write the network output output
-                # Generate a fake event and modify its channel
-                # fake_event = self.event.model_copy()
-
-                # Create a new event
-                t_index = self.event.index.get("t", 0)
-                custom_channel = 2
-
-                fake_event = MDAEvent(channel=self.event.channel, index={"t": t_index, "c": custom_channel}, min_start_time=0)
-
-                # fake_event.index["c"] = custom_channel
-                
-                # Call writer.frameReady() to store the network output
-                output_save = np.array(output*1e4)
-                output_save = np.transpose(output_save)
-                output_save = output_save.astype('uint16')
-
-                meta = FrameMetaV1(fake_event)
-                self.writer.frameReady(frame = output_save, event=fake_event, meta=meta)
+            meta = FrameMetaV1(fake_event)
+            # self.writer.frameReady(frame = output_save, event=fake_event, meta=meta)
+            self.hub.new_writer_frame.emit(output_save, fake_event, meta)
+            logger.info("Analyser")
 
 
-        predict_thread = Thread(target=predict)
+        predict_thread = Thread(target=predict, args=(self.images.copy(),))
         predict_thread.start()
+        self.images[:-1] = self.images[1:]
