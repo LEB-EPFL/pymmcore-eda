@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 from src.pymmcore_eda._logger import logger
 
 class InterpreterSettings:
-    threshold: float = 0.9
+    threshold: float = 0.64
     square_semi_size: int = 60 #px
 
 class Interpreter:
@@ -25,9 +25,12 @@ class Interpreter:
         logger.info("Interpreter")
         mask = net_out > InterpreterSettings.threshold
         coordinates = np.argwhere(mask)
+        
+        # only if smart scanning
         for coord in coordinates:
             x, y = coord[0], coord[1]
             mask[x - InterpreterSettings.square_semi_size : x + InterpreterSettings.square_semi_size, y - InterpreterSettings.square_semi_size : y + InterpreterSettings.square_semi_size] = 1
+        # only if smart scanning
         
         self.hub.new_interpretation.emit(mask, event, metadata)
     

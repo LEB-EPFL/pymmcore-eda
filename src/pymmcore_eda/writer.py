@@ -63,11 +63,15 @@ class AdaptiveWriter(TensorStoreHandler):
             self, frame: np.ndarray, event: useq.MDAEvent, meta: FrameMetaV1
         ) -> None:
         if event.index.get("c", 0) == 1:
+            
+            # only if smart scanning
             new_metadata = event.metadata.copy()
             new_metadata['0'][0] = json.dumps({'0': event.metadata['0'][0].tolist()})
             event = event.replace(metadata = new_metadata)
-            # event = event.replace(metadata = {})
+            event = event.replace(metadata = {})
             meta['mda_event'] = meta['mda_event'].replace(metadata = {})
+            # only if smart scanning
+            
         super().frameReady(frame, event, meta)
 
     def get_shape_chunks_labels(self, frame_shape, seq):
