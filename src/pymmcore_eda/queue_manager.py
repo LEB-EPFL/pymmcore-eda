@@ -57,19 +57,23 @@ class QueueManager:
             )
             event = event.replace(min_start_time=start)
 
-        # "summing" masks:
         if event.index.get("c", 0) != 0:
             if len(self.event_register) != 0:
                 events = self.event_register[event.min_start_time]["events"].copy()
                 for i, event_i in enumerate(events):
                     if event_i.index.get('c',0) == event.index.get('c',0):
-                        copied_map = event_i.metadata.get('0',0)[0]
-                        current_map = event.metadata.get('0',0)[0]
-                        new_map = np.logical_or(copied_map, current_map)
-                        new_metadata = event.metadata.copy()
-                        new_metadata['0'][0] = new_map
-                        event = event.replace(metadata=new_metadata)
                         del self.event_register[event.min_start_time]['events'][i]
+                        
+                        # if smart scan event, perfom logical or between masks masks:
+                        try:
+                            copied_map = event_i.metadata.get('0',0)[0]
+                            current_map = event.metadata.get('0',0)[0]
+                            new_map = np.logical_or(copied_map, current_map)
+                            new_metadata = event.metadata.copy()
+                            new_metadata['0'][0] = new_map
+                            event = event.replace(metadata=new_metadata)
+                        except:
+                            pass
         
         if event.min_start_time not in self.event_register.keys():
             self.event_register[event.min_start_time] = {"timer": None, "events": []}
