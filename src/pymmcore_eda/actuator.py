@@ -42,6 +42,28 @@ class MDAActuator:
         if self.wait:
             time.sleep(event.min_start_time + 3)
 
+class SmartActuator_widefield:
+    """Actuator that subscribes to new_interpretation and reacts to incoming events."""
+
+    def __init__(self, queue_manager: QueueManager, hub: EventHub, n_events: int = 3):
+        self.queue_manager = queue_manager
+        self.hub = hub
+        self.hub.new_interpretation.connect(self._act)
+        self.n_events = n_events
+
+    def _act(self, interpretation, event, metadata):
+        
+        # checks if the interpretation is not empty
+        if np.sum(interpretation) != 0:
+        
+            print(f'Generating {self.n_events} smart Widefield frame\n')
+            
+            for i in range(1,self.n_events+1):
+                event = MDAEvent(channel={"config":"GFP (470nm)", "exposure": 10}, 
+                                index={"t": -i, "c": 1}, 
+                                min_start_time=0)
+                self.queue_manager.register_event(event)
+
 
 class ButtonActuator:
     """Actuator that sends events to the queue manager when a button is pressed."""
