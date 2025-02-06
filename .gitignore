@@ -163,7 +163,8 @@ cython_debug/
 
 .vscode/
 .ruff_cache/
+
 Logs/Log_Default
 smart_scan/resources/
-test_data/
-
+test_data
+smart_scan_env  

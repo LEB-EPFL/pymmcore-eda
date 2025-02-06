@@ -56,36 +56,35 @@ mmc.setProperty("pE-800", "Global State", 0)
 # mmc.setProperty('Core', 'Shutter', 'Multi Shutter')
 mmc.setConfig("Channel","DAPI (365nm)")
 
-loc = Path(__file__).parent / "test_data/Cos7_biotrkBlue_3600frames_1s_smart_05.ome.zarr"
+loc = Path(__file__).parent / "test_data/Cos7_MTDeepRed_200frames_1s_widefield_07_tresh_08.ome.zarr"
 writer = AdaptiveWriter(path=loc, delete_existing=True)
 
+
 hub = EventHub(mmc.mda, writer=writer)
+
 queue_manager = QueueManager()
-analyser = Analyser(hub, writer)
-interpreter = Interpreter(hub)
+
+# analyser = Dummy_Analyser(hub)
+analyser = Analyser(hub)
 
 # define the MDA sequence
 mda_sequence = MDASequence(
     channels=(Channel(config="Brightfield",exposure=100),),
-    time_plan={"interval": 1, "loops": 3600},
+    time_plan={"interval": 1, "loops": 200},
 )
 mmc.mda._reset_event_timer()
 queue_manager.time_machine._t0 = time.perf_counter()
 
 # initialise all the components
-
-analyser = Dummy_Analyser(hub)
-#analyser = Analyser(hub)
-
 base_actuator = MDAActuator(queue_manager, mda_sequence)
 
 # for smart widefield events
-# interpreter = Interpreter_widefield(hub)
-# smart_actuator = SmartActuator_widefield(queue_manager, hub, n_events=5)
+interpreter = Interpreter_widefield(hub)
+smart_actuator = SmartActuator_widefield(queue_manager, hub, n_events=20)
 
 # for smart scan events
-interpreter = Interpreter_scan(hub)
-smart_actuator = SmartActuator_scan(queue_manager, hub, n_events=5)
+# interpreter = Interpreter_scan(hub)
+# smart_actuator = SmartActuator_scan(queue_manager, hub, n_events=5)
 
 
 base_actuator.thread.start()

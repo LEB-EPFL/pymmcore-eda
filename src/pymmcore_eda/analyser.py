@@ -21,7 +21,8 @@ if TYPE_CHECKING:
     
 
 class AnalyserSettings:
-    model_path: str = "/Volumes/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
+    model_path: str = "//sb-nas1.rcp.epfl.ch/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
+    # model_path: str = "/Volumes/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
 
 @tf.keras.utils.register_keras_serializable(package='deep_events', name='wmse_loss')
 class WMSELoss(tf.keras.losses.Loss):
@@ -69,7 +70,7 @@ def emit_writer_signal(hub, event: MDAEvent, output, custom_channel : int = 2):
     
     output_save = np.array(output*1e4)
 
-    output_save[0:256, 0:256] = 500
+    # output_save[0:256, 0:256] = 500
 
     output_save = np.transpose(output_save)
     output_save = output_save.astype('uint16')
@@ -98,7 +99,7 @@ class Dummy_Analyser:
         elif np.issubdtype(dtype, np.floating):
             max_value = np.finfo(dtype).max
 
-        img[200,200] = 65520
+        # img[200,200] = 65520
 
         # normalise and filter the image
         img_norm = img/max_value
@@ -159,6 +160,7 @@ class Analyser:
         
         self.event = event
         self.metadata = metadata
+        t_index = self.event.index.get("t", 0)
         if self.event.index.get("c", 0) != 0:
             return
         
@@ -166,20 +168,20 @@ class Analyser:
         # self.img = self.dummy_data[self.event.index.get("t", 0)]
         self.images[-1] = self.img
 
-        def predict(images):
+        def predict(images,t_index):
             if self.event.index.get("t", 0) < 4:
                 return
-            logger.info('PREDICTING')
             input = images.swapaxes(0,2)
             input = np.expand_dims(input, 0)
             input_cropped = input[:, 512:1536, 512:1536, :]
         
+            # logger.info('Prediction Started')
             output_cropped = self.model.predict(input_cropped)
-            output_cropped = output_cropped[0, :, :, 0]
+            logger.info(f"Prediction finished for event t = {t_index}. Max value: {np.max(output_cropped):.2f}")
             
+            output_cropped = output_cropped[0, :, :, 0]
             output = np.zeros((2048, 2048))
             output[512:1536, 512:1536] = output_cropped
-            print(f'Maximum value of the model output: {np.max(output)}\n')
             
             # Emits new_analysis signal
             self.hub.new_analysis.emit(output, event, metadata)
@@ -187,9 +189,8 @@ class Analyser:
             # Emits new_writer_frame signal to store the network output
             emit_writer_signal(self.hub, event, output)
 
-            logger.info("Analyser")
 
 
-        predict_thread = Thread(target=predict, args=(self.images.copy(),))
+        predict_thread = Thread(target=predict, args=(self.images.copy(),t_index))
         predict_thread.start()
         self.images[:-1] = self.images[1:]

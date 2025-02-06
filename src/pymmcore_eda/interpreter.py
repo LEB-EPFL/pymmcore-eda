@@ -11,8 +11,7 @@ if TYPE_CHECKING:
 from src.pymmcore_eda._logger import logger
 
 class InterpreterSettings:
-    threshold: float = 0.9
-    square_semi_size: int = 60 #px
+    threshold: float = 0.8
 
 class Interpreter_widefield:
     """Get event score and produce a binary image that informs the actuator."""
@@ -22,7 +21,6 @@ class Interpreter_widefield:
         self.hub.new_analysis.connect(self._interpret)
 
     def _interpret(self, net_out: np.ndarray, event: MDAEvent, metadata: dict):
-        logger.info("Interpreter")
         mask = net_out > InterpreterSettings.threshold
         
         # Emit the interpretation result only if not empty
