@@ -8,18 +8,40 @@ from pymmcore_plus.metadata.schema import FrameMetaV1
 from src.pymmcore_eda.helpers.function_helpers import normalize_tilewise_vectorized
 from src.pymmcore_eda._logger import logger
 
+from enum import IntEnum
+
 from useq import MDAEvent
 
 if TYPE_CHECKING:
     import numpy as np
     from event_hub import EventHub
-    
+
+class CropLimits():
+    def __init__(self, image_shape:tuple, crop_size:int):
+        
+        H, W = image_shape
+        crop_size = min(crop_size, H, W)  # Restrict size if too large
+        
+        # Compute center coordinates
+        center_y, center_x = H // 2, W // 2
+        half_side = crop_size // 2
+
+        # Define mask boundaries
+        self.y_start, self.y_end = max(0, center_y - half_side), min(H, center_y + half_side)
+        self.x_start, self.x_end = max(0, center_x - half_side), min(W, center_x + half_side)
+        
 
 class AnalyserSettings:
     # model_path: str = "//sb-nas1.rcp.epfl.ch/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
     model_path: str = "/Volumes/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
     n_frames_model = 4
-    tile_size = 256
+    n_fake_predictions = 3
+    tile_size = 256 # used for tile-wise normalisation.
+    crop_size = 512 # crop the images before feeding the model. Used to haste inference. 
+    image_shape = (2048,2048)
+    
+    # Calculated properties
+    crop_limits = CropLimits(image_shape, crop_size)
 
 
 def emit_writer_signal(hub, event: MDAEvent, output, custom_channel : int = 2):
@@ -101,13 +123,17 @@ class Analyser:
         self.model = keras.models.load_model(settings.model_path, compile = False)
         self.n_frames_model = settings.n_frames_model
         self.predict_thread = None
-        self.output = np.zeros((2048, 2048))
+        self.output = np.zeros(settings.image_shape)
         self.tile_size = settings.tile_size
+        self.n_fake_predictions = settings.n_fake_predictions
+
+        # Obtain the crop limits
+        self.crop_limits = settings.crop_limits
         
         # connect the frameReady signal to the analyse method
         self.hub.frameReady.connect(self._analyse)
         
-        self.images = np.zeros((5, 2048, 2048))
+        self.images = np.zeros((self.n_frames_model+1, *settings.image_shape))
         # self.dummy_data = imread(Path("C:/Users/glinka/Desktop/stk_0010_FOV_1_MMStack_Default.ome.tif"))
         # img = self.dummy_data[0:3]
 
@@ -115,14 +141,10 @@ class Analyser:
         img = self.images
         input = img.swapaxes(0,2)
         input = np.expand_dims(input, 0)
-
-        # Crop all the images to haste prediction
-        input_cropped = input[:, 512:1536, 512:1536, :]
-        self.model.predict(input_cropped)
-        self.model.predict(input_cropped)
-        self.model.predict(input_cropped)
-        self.model.predict(input_cropped)
-
+        input_cropped = input[:, self.crop_limits.y_start:self.crop_limits.y_end, self.crop_limits.x_start:self.crop_limits.x_end, :]
+        for _ in range(self.n_fake_predictions):
+            self.model.predict(input_cropped)
+        
     
     def _analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict):
         
@@ -149,7 +171,7 @@ class Analyser:
             t_index = event.index.get("t", 0)
             
             # Perform the prediction in a separate thread
-            predict_thread = Thread(target=predict, args=(self.images.copy(),t_index, event, self.model, self.hub, metadata, self.n_frames_model, self.output))
+            predict_thread = Thread(target=predict, args=(self.images.copy(),t_index, event, self.model, self.hub, metadata, self.n_frames_model, self.output, self. crop_limits))
             predict_thread.start()
 
             # Store the thread to avoid spawning multiple threads
@@ -159,7 +181,7 @@ class Analyser:
         self.images[:-1] = self.images[1:]
 
 
-def predict(images,t_index, event, model, hub, metadata,n_frames_model, output):
+def predict(images,t_index, event, model, hub, metadata,n_frames_model, output, crop_limits):
     
     # Skip if the list of images is not full 
     if event.index.get("t", 0) < n_frames_model:
@@ -167,13 +189,13 @@ def predict(images,t_index, event, model, hub, metadata,n_frames_model, output):
     
     input = images.swapaxes(0,2)
     input = np.expand_dims(input, 0)
-    input_cropped = input[:, 512:1536, 512:1536, :]
+    input_cropped = input[:, crop_limits.y_start:crop_limits.y_end, crop_limits.x_start:crop_limits.x_end, :]
 
     # logger.info('Prediction Started')
     output_cropped = model.predict(input_cropped)
     logger.info(f"Prediction finished for event t = {t_index}. Max value: {np.max(output_cropped):.2f}")
     output_cropped = output_cropped[0, :, :, 0]
-    output[512:1536, 512:1536] = output_cropped
+    output[crop_limits.y_start:crop_limits.y_end, crop_limits.x_start:crop_limits.x_end] = output_cropped
     
     # Emits new_analysis signal
     hub.new_analysis.emit(output, event, metadata)
