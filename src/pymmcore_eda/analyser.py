@@ -92,51 +92,17 @@ class Analyser:
     def __init__(self, hub: EventHub):
         
         # Import tensorflow here, so that we don't need to do it when using DummyAnalyser
-        import tensorflow as tf
         from tensorflow import keras
         
-        @tf.keras.utils.register_keras_serializable(package='deep_events', name='wmse_loss')
-        class WMSELoss(tf.keras.losses.Loss):
-            def __init__(self, pos_weight=1, name='wmse_loss'):
-                super().__init__(name=name)
-                self.pos_weight = pos_weight
-
-            def call(self, y_true, y_pred):
-                weight_vector = y_true * self.pos_weight + (1. - y_true)
-                return tf.reduce_mean(weight_vector * tf.square(y_true - y_pred))
-
-            def get_config(self):
-                return {'pos_weight': self.pos_weight}
-        tf.keras.utils.get_custom_objects().update({'WMSELoss': WMSELoss})
-
-        @tf.keras.utils.register_keras_serializable()
-        class WBCELoss(tf.keras.losses.Loss):
-            def __init__(self, pos_weight=1, name='wbce_loss'):
-                super().__init__(name=name)
-                self.pos_weight = pos_weight
-            def call(self, y_true, y_pred):
-                bce = tf.keras.backend.binary_crossentropy(y_true, y_pred)
-                # Apply the weights
-                weight_vector = y_true * self.pos_weight + (1. - y_true)
-                weighted_bce = weight_vector * bce
-                return tf.keras.backend.mean(weighted_bce)
-
-            def get_config(self):
-                return {'pos_weight': self.pos_weight}    
-        tf.keras.utils.get_custom_objects().update({'WBCELoss': WBCELoss})
-
-
-
         settings = AnalyserSettings()
+        
         self.hub = hub
-        self.hub.frameReady.connect(self._analyse)
         self.model = keras.models.load_model(settings.model_path, compile = False)
         self.n_frames_model = settings.n_frames_model
         self.output = np.zeros((2048, 2048))
-        logger.info("Model loaded")
         
-        # Needed to write the network output on another channel
-        # self.writer = writer
+        # connect the frameReady signal to the analyse method
+        self.hub.frameReady.connect(self._analyse)
         
         self.images = np.zeros((5, 2048, 2048))
         # self.dummy_data = imread(Path("C:/Users/glinka/Desktop/stk_0010_FOV_1_MMStack_Default.ome.tif"))
