@@ -99,6 +99,7 @@ class Analyser:
         self.hub = hub
         self.model = keras.models.load_model(settings.model_path, compile = False)
         self.n_frames_model = settings.n_frames_model
+        self.predict_thread = None
         self.output = np.zeros((2048, 2048))
         
         # connect the frameReady signal to the analyse method
@@ -143,10 +144,18 @@ class Analyser:
         # Add the current image to the list of images
         self.images[-1] = img
 
-        t_index = event.index.get("t", 0)
-        predict_thread = Thread(target=predict, args=(self.images.copy(),t_index, event, self.model, self.hub, metadata, self.n_frames_model, self.output))
-        predict_thread.start()
-        
+        # Allows only one prediction thread at a time
+        if self.predict_thread is None or not self.predict_thread.is_alive():
+            
+            t_index = event.index.get("t", 0)
+            
+            # Perform the prediction in a separate thread
+            predict_thread = Thread(target=predict, args=(self.images.copy(),t_index, event, self.model, self.hub, metadata, self.n_frames_model, self.output))
+            predict_thread.start()
+
+            # Store the thread to avoid spawning multiple threads
+            self.predict_thread = predict_thread
+
         # Shift the images in the list
         self.images[:-1] = self.images[1:]
 
