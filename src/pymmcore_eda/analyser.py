@@ -2,17 +2,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 import numpy as np
-from tifffile import imread, imwrite
-from pathlib import Path
-from tensorflow import keras
-import tensorflow as tf
 from threading import Thread
 from pymmcore_plus.metadata.schema import FrameMetaV1
 
-from smart_scan.helpers.function_helpers import normalize_tilewise_vectorized
-
+from src.pymmcore_eda.helpers.function_helpers import normalize_tilewise_vectorized
 from src.pymmcore_eda._logger import logger
-from src.pymmcore_eda.writer import AdaptiveWriter
+
 from useq import MDAEvent
 
 if TYPE_CHECKING:
@@ -21,38 +16,10 @@ if TYPE_CHECKING:
     
 
 class AnalyserSettings:
-    model_path: str = "//sb-nas1.rcp.epfl.ch/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
-    # model_path: str = "/Volumes/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
+    # model_path: str = "//sb-nas1.rcp.epfl.ch/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
+    model_path: str = "/Volumes/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
+    n_frames_model = 4
 
-@tf.keras.utils.register_keras_serializable(package='deep_events', name='wmse_loss')
-class WMSELoss(tf.keras.losses.Loss):
-    def __init__(self, pos_weight=1, name='wmse_loss'):
-        super().__init__(name=name)
-        self.pos_weight = pos_weight
-
-    def call(self, y_true, y_pred):
-        weight_vector = y_true * self.pos_weight + (1. - y_true)
-        return tf.reduce_mean(weight_vector * tf.square(y_true - y_pred))
-
-    def get_config(self):
-        return {'pos_weight': self.pos_weight}
-tf.keras.utils.get_custom_objects().update({'WMSELoss': WMSELoss})
-
-@tf.keras.utils.register_keras_serializable()
-class WBCELoss(tf.keras.losses.Loss):
-    def __init__(self, pos_weight=1, name='wbce_loss'):
-        super().__init__(name=name)
-        self.pos_weight = pos_weight
-    def call(self, y_true, y_pred):
-        bce = tf.keras.backend.binary_crossentropy(y_true, y_pred)
-        # Apply the weights
-        weight_vector = y_true * self.pos_weight + (1. - y_true)
-        weighted_bce = weight_vector * bce
-        return tf.keras.backend.mean(weighted_bce)
-
-    def get_config(self):
-        return {'pos_weight': self.pos_weight}    
-tf.keras.utils.get_custom_objects().update({'WBCELoss': WBCELoss})
 
 def emit_writer_signal(hub, event: MDAEvent, output, custom_channel : int = 2):
     """
@@ -99,7 +66,7 @@ class Dummy_Analyser:
         elif np.issubdtype(dtype, np.floating):
             max_value = np.finfo(dtype).max
 
-        # img[200,200] = 65520
+        img[200,200] = 65520
 
         # normalise and filter the image
         img_norm = img/max_value
@@ -123,6 +90,43 @@ class Analyser:
     """Analyse the image and produce an event score map for the interpreter."""
 
     def __init__(self, hub: EventHub):
+        
+        # Import tensorflow here, so that we don't need to do it when using DummyAnalyser
+        import tensorflow as tf
+        from tensorflow import keras
+        
+        @tf.keras.utils.register_keras_serializable(package='deep_events', name='wmse_loss')
+        class WMSELoss(tf.keras.losses.Loss):
+            def __init__(self, pos_weight=1, name='wmse_loss'):
+                super().__init__(name=name)
+                self.pos_weight = pos_weight
+
+            def call(self, y_true, y_pred):
+                weight_vector = y_true * self.pos_weight + (1. - y_true)
+                return tf.reduce_mean(weight_vector * tf.square(y_true - y_pred))
+
+            def get_config(self):
+                return {'pos_weight': self.pos_weight}
+        tf.keras.utils.get_custom_objects().update({'WMSELoss': WMSELoss})
+
+        @tf.keras.utils.register_keras_serializable()
+        class WBCELoss(tf.keras.losses.Loss):
+            def __init__(self, pos_weight=1, name='wbce_loss'):
+                super().__init__(name=name)
+                self.pos_weight = pos_weight
+            def call(self, y_true, y_pred):
+                bce = tf.keras.backend.binary_crossentropy(y_true, y_pred)
+                # Apply the weights
+                weight_vector = y_true * self.pos_weight + (1. - y_true)
+                weighted_bce = weight_vector * bce
+                return tf.keras.backend.mean(weighted_bce)
+
+            def get_config(self):
+                return {'pos_weight': self.pos_weight}    
+        tf.keras.utils.get_custom_objects().update({'WBCELoss': WBCELoss})
+
+
+
         settings = AnalyserSettings()
         self.hub = hub
         self.hub.frameReady.connect(self._analyse)
