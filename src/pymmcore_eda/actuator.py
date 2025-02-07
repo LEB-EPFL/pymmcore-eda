@@ -53,18 +53,15 @@ class SmartActuator_widefield:
 
     def _act(self, interpretation, event, metadata):
         
-        # checks if the interpretation is not empty
-        if np.sum(interpretation) != 0:
-            
-            print("\n")
-            logger.info(f'Generating {self.n_events} smart Widefield frame')
-            print("\n")
+        print("\n")
+        logger.info(f'Generating {self.n_events} smart Widefield frame')
+        print("\n")
 
-            for i in range(1,self.n_events+1):
-                event = MDAEvent(channel={"config":"Cy5 (635nm)", "exposure": 10}, 
-                                index={"t": -i, "c": 1}, 
-                                min_start_time=0)
-                self.queue_manager.register_event(event)
+        for i in range(1,self.n_events+1):
+            event = MDAEvent(channel={"config":"Cy5 (635nm)", "exposure": 10}, 
+                            index={"t": -i, "c": 1}, 
+                            min_start_time=0)
+            self.queue_manager.register_event(event)
 
 
 class ButtonActuator:

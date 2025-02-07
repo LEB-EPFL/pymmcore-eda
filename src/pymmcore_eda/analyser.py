@@ -19,6 +19,7 @@ class AnalyserSettings:
     # model_path: str = "//sb-nas1.rcp.epfl.ch/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
     model_path: str = "/Volumes/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
     n_frames_model = 4
+    tile_size = 256
 
 
 def emit_writer_signal(hub, event: MDAEvent, output, custom_channel : int = 2):
@@ -101,6 +102,7 @@ class Analyser:
         self.n_frames_model = settings.n_frames_model
         self.predict_thread = None
         self.output = np.zeros((2048, 2048))
+        self.tile_size = settings.tile_size
         
         # connect the frameReady signal to the analyse method
         self.hub.frameReady.connect(self._analyse)
@@ -129,16 +131,13 @@ class Analyser:
             return
 
         # tile-wise normalisation of the image
-        tile_size = 256
         try:
-            img = normalize_tilewise_vectorized(arr=img, tile_size=tile_size)
+            img = normalize_tilewise_vectorized(arr=img, tile_size=self.tile_size)
         except AssertionError as e:
-            img = img
-            logger.info(f"Analyser: failed to perform tile-wise normalisation. {e}")
+            img = np.divide(img, np.max(img))
+            logger.info(f"Analyser: failed to perform tile-wise normalisation. {e}. Normalising the whole image instead.")
         
-        # self.event = event
-        # self.metadata = metadata
-        # logger.info('Fake data going in')
+        # For test, use dummy data
         # self.img = self.dummy_data[self.event.index.get("t", 0)]
         
         # Add the current image to the list of images

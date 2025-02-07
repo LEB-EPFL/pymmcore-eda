@@ -21,7 +21,6 @@ class Interpreter_scan:
         self.hub.new_analysis.connect(self._interpret)
 
     def _interpret(self, net_out: np.ndarray, event: MDAEvent, metadata: dict):
-        logger.info("Interpreter for smart scan")
         mask = net_out > InterpreterSettings.threshold
         coordinates = np.argwhere(mask)
         
