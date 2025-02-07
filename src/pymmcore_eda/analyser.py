@@ -131,7 +131,9 @@ class Analyser:
         self.hub = hub
         self.hub.frameReady.connect(self._analyse)
         self.model = keras.models.load_model(settings.model_path, compile = False)
-        print("Model loaded")
+        self.n_frames_model = settings.n_frames_model
+        self.output = np.zeros((2048, 2048))
+        logger.info("Model loaded")
         
         # Needed to write the network output on another channel
         # self.writer = writer
@@ -152,49 +154,55 @@ class Analyser:
         self.model.predict(input_cropped)
         self.model.predict(input_cropped)
 
+    
     def _analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict):
         
+        # Skip if not the first channel
+        if event.index.get("c", 0) != 0:
+            return
+
         # tile-wise normalisation of the image
         tile_size = 256
         try:
-            self.img = normalize_tilewise_vectorized(arr=img, tile_size=tile_size)
+            img = normalize_tilewise_vectorized(arr=img, tile_size=tile_size)
         except AssertionError as e:
-            self.img = img
+            img = img
             logger.info(f"Analyser: failed to perform tile-wise normalisation. {e}")
         
-        self.event = event
-        self.metadata = metadata
-        t_index = self.event.index.get("t", 0)
-        if self.event.index.get("c", 0) != 0:
-            return
-        
+        # self.event = event
+        # self.metadata = metadata
         # logger.info('Fake data going in')
         # self.img = self.dummy_data[self.event.index.get("t", 0)]
-        self.images[-1] = self.img
-
-        def predict(images,t_index):
-            if self.event.index.get("t", 0) < 4:
-                return
-            input = images.swapaxes(0,2)
-            input = np.expand_dims(input, 0)
-            input_cropped = input[:, 512:1536, 512:1536, :]
         
-            # logger.info('Prediction Started')
-            output_cropped = self.model.predict(input_cropped)
-            logger.info(f"Prediction finished for event t = {t_index}. Max value: {np.max(output_cropped):.2f}")
-            
-            output_cropped = output_cropped[0, :, :, 0]
-            output = np.zeros((2048, 2048))
-            output[512:1536, 512:1536] = output_cropped
-            
-            # Emits new_analysis signal
-            self.hub.new_analysis.emit(output, event, metadata)
-            
-            # Emits new_writer_frame signal to store the network output
-            emit_writer_signal(self.hub, event, output)
+        # Add the current image to the list of images
+        self.images[-1] = img
 
-
-
-        predict_thread = Thread(target=predict, args=(self.images.copy(),t_index))
+        t_index = event.index.get("t", 0)
+        predict_thread = Thread(target=predict, args=(self.images.copy(),t_index, event, self.model, self.hub, metadata, self.n_frames_model, self.output))
         predict_thread.start()
+        
+        # Shift the images in the list
         self.images[:-1] = self.images[1:]
+
+
+def predict(images,t_index, event, model, hub, metadata,n_frames_model, output):
+    
+    # Skip if the list of images is not full 
+    if event.index.get("t", 0) < n_frames_model:
+        return
+    
+    input = images.swapaxes(0,2)
+    input = np.expand_dims(input, 0)
+    input_cropped = input[:, 512:1536, 512:1536, :]
+
+    # logger.info('Prediction Started')
+    output_cropped = model.predict(input_cropped)
+    logger.info(f"Prediction finished for event t = {t_index}. Max value: {np.max(output_cropped):.2f}")
+    output_cropped = output_cropped[0, :, :, 0]
+    output[512:1536, 512:1536] = output_cropped
+    
+    # Emits new_analysis signal
+    hub.new_analysis.emit(output, event, metadata)
+    
+    # Emits new_writer_frame signal to store the network output
+    emit_writer_signal(hub, event, output)
