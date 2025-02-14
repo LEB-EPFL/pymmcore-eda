@@ -5,7 +5,7 @@ Smart microscopy library at LEB EPFL
 ## Installation using conda
 1. From a conda terminal, create conda environment:
     ```
-    conda create -n pymmcore-eda-env python=3.12.7
+    conda create -n pymmcore-eda-env python<3.11
     ```
 2. Activate the conda environment:
     ```
@@ -22,7 +22,7 @@ Smart microscopy library at LEB EPFL
     E.g., for Windows:
     ```
     conda install -c conda-forge cudatoolkit=11.2 cudnn=8.1.0
-    python -m pip install "tensorflow<2.11"
+    conda install 'tensorflow < 2.11'
     ```
 
     Once installed, you can run run_smart.py with instantianting the class Analyser::
