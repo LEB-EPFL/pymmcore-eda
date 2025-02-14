@@ -11,9 +11,10 @@ Smart microscopy library at LEB EPFL
     ```
     conda activate pymmcore-eda-env
     ```
-3. From within the environment, install pymmcore plus and mmcore:
+3. From within the environment, install pymmcore plus, pillow and mmcore:
     ```
     conda install conda-forge::pymmcore-plus
+    conda install pillow
     mmcore install
     ```
 4. Install Tensorflow and run inferences.
