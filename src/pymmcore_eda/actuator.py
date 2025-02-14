@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 from useq import MDAEvent, Channel
 import numpy as np
-from PIL import Image
 
 from src.pymmcore_eda._logger import logger
 from smart_scan.custom_engine import CustomKeyes, GalvoParams

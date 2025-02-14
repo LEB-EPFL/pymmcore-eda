@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING
 
 from useq import MDAEvent
 import numpy as np
-from PIL import Image
 
 from smart_scan.custom_engine import CustomKeyes, GalvoParams
 from smart_scan.helpers.function_helpers import ScanningStragies
