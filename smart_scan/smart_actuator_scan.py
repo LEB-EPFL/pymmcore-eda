@@ -53,6 +53,7 @@ class SmartActuator_scan:
                 event = MDAEvent(channel={"config":"DAPI (365nm)", "exposure": 100.}, 
                                 index={"t": -i, "c": 1}, 
                                 min_start_time=0,
+                                keep_shutter_open=True,
                                 metadata={
                                     CustomKeyes.GALVO: {
                                         GalvoParams.SCAN_MASK: mask,

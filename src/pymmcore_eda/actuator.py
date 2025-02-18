@@ -29,7 +29,7 @@ class MDAActuator:
         self.n_channels = mda_sequence.sizes.get("c", 1)
         self.channels = self.queue_manager.register_actuator(self, self.n_channels)
 
-    def _run(self, wait=True):
+    def _run(self):
         # Adjust the channels to the ones supposed to be pushed to
         for event in self.mda_sequence:
             new_index = event.index.copy()
@@ -53,14 +53,18 @@ class SmartActuator_widefield:
     def _act(self, interpretation, event, metadata):
         
         print("\n")
-        logger.info(f'Generating {self.n_events} smart Widefield frame')
+        t_index = event.index.get("t", 0)
+        logger.info(f'Generating {self.n_events} smart Widefield frames. t_index = {t_index}')
         print("\n")
 
         for i in range(1,self.n_events+1):
-            event = MDAEvent(channel={"config":"Cy5 (635nm)", "exposure": 10}, 
+
+            curr_event = MDAEvent(channel={"config":"Cy5 (635nm)", "exposure": 100}, 
                             index={"t": -i, "c": 1}, 
-                            min_start_time=0)
-            self.queue_manager.register_event(event)
+                            min_start_time=0,
+                            keep_shutter_open=True, # to hasten acquisition
+                            )
+            self.queue_manager.register_event(curr_event)
 
 
 class ButtonActuator:
