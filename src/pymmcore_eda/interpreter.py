@@ -10,7 +10,9 @@ if TYPE_CHECKING:
 from src.pymmcore_eda._logger import logger
 
 class InterpreterSettings:
+
     threshold: float = 0.8
+
 
 class Interpreter_widefield:
     """Get event score and produce a binary image that informs the actuator."""

@@ -72,6 +72,7 @@ class AdaptiveWriter(TensorStoreHandler):
                 meta['mda_event'] = meta['mda_event'].replace(metadata = {})
             except:
                 pass
+
         super().frameReady(frame, event, meta)
 
     def get_shape_chunks_labels(self, frame_shape, seq):
