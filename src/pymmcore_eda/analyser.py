@@ -12,6 +12,8 @@ from enum import IntEnum
 
 from useq import MDAEvent
 
+import time
+
 if TYPE_CHECKING:
     import numpy as np
     from event_hub import EventHub
@@ -72,43 +74,31 @@ def emit_writer_signal(hub, event: MDAEvent, output, custom_channel : int = 2):
 class Dummy_Analyser:
     """Analyse the image and produce a map for the interpreter."""
     
-    def __init__(self, hub: EventHub):
+    def __init__(self, hub: EventHub, smart_event_period: int = 5, prediction_time: float = 0.5):
         self.hub = hub
         self.hub.frameReady.connect(self._analyse)
+        self.smart_event_period = smart_event_period
+        self.prediction_time = prediction_time
+        self.predict_thread = None
 
     def _analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict):
 
         if event.index.get("c", 0) != 0:
             return
 
-        # Determine the maximum possible value based on dtype
-        dtype = img.dtype
-        max_value = 1 
-        if np.issubdtype(dtype, np.integer):
-            max_value = np.iinfo(dtype).max
-        elif np.issubdtype(dtype, np.floating):
-            max_value = np.finfo(dtype).max
+        # Allows only one prediction thread at a time
+        if self.predict_thread is None or not self.predict_thread.is_alive():
+            
+            # Perform the prediction in a separate thread
+            predict_thread = Thread(target=dummy_predict, args=(img.copy(), event, metadata, self.hub, self.prediction_time, self.smart_event_period))
+            
+            # Store the thread to avoid spawning multiple threads
+            self.predict_thread = predict_thread
+            
+            predict_thread.start()
 
-        img[200,200] = 65520
-
-        # normalise and filter the image
-        img_norm = img/max_value
         
-        threshold = 0.1
-        img_norm[img_norm <= threshold] = 0
         
-        output = img_norm
-        print(f'Event score max: {np.max(output)}')
-        print(f'Event score min: {np.min(output)}')
-
-        # Emit the event score
-        self.hub.new_analysis.emit(output, event, metadata)
-
-        # Emit new_writer_frame to store the network output
-        emit_writer_signal(self.hub, event, output)
-
-        logger.info("Dummy Analyser")
-
 class Analyser:
     """Analyse the image and produce an event score map for the interpreter."""
 
@@ -172,13 +162,47 @@ class Analyser:
             
             # Perform the prediction in a separate thread
             predict_thread = Thread(target=predict, args=(self.images.copy(),t_index, event, self.model, self.hub, metadata, self.n_frames_model, self.output, self. crop_limits))
-            predict_thread.start()
-
+            
             # Store the thread to avoid spawning multiple threads
             self.predict_thread = predict_thread
+            
+            predict_thread.start()
+
 
         # Shift the images in the list
         self.images[:-1] = self.images[1:]
+
+def dummy_predict(img,event, metadata, hub, prediction_time, smart_event_period):
+    # Determine the maximum possible value based on dtype
+    dtype = img.dtype
+    max_value = 1 
+    if np.issubdtype(dtype, np.integer):
+        max_value = np.iinfo(dtype).max
+    elif np.issubdtype(dtype, np.floating):
+        max_value = np.finfo(dtype).max
+
+    # perform the dummy prediction every smart_event_period frames
+    t = event.index.get("t", 0)
+    if smart_event_period > 0 and t % smart_event_period == 0:
+        img[200,200] = 65520
+
+    # normalise and filter the image
+    img_norm = img/max_value
+    
+    threshold = 0.1
+    img_norm[img_norm <= threshold] = 0
+    
+    output = img_norm
+    
+    # Sleep for a while to simulate the prediction time
+    time.sleep(prediction_time)
+    logger.info(f"Dummy prediction finished for event t = {t}. Max value: {np.max(output):.2f}")
+
+    # Emit the event score
+    hub.new_analysis.emit(output, event, metadata)
+
+    # Emit new_writer_frame to store the network output
+    emit_writer_signal(hub, event, output)
 
 
 def predict(images,t_index, event, model, hub, metadata,n_frames_model, output, crop_limits):
