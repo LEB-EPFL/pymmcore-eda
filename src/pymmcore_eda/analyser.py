@@ -196,7 +196,8 @@ def dummy_predict(img,event, metadata, hub, prediction_time, smart_event_period)
     
     # Sleep for a while to simulate the prediction time
     time.sleep(prediction_time)
-    logger.info(f"Dummy prediction finished for event t = {t}. Max value: {np.max(output):.2f}")
+    elapsed = int((time.time() - t_start)*1000)
+    logger.info(f"Dummy prediction finished for event t = {t}. Duration = {elapsed} ms. Max value: {np.max(output):.2f}")
 
     # Emit the event score
     hub.new_analysis.emit(output, event, metadata)
