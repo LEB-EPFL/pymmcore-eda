@@ -215,9 +215,12 @@ def predict(images,t_index, event, model, hub, metadata,n_frames_model, output, 
     input = np.expand_dims(input, 0)
     input_cropped = input[:, crop_limits.y_start:crop_limits.y_end, crop_limits.x_start:crop_limits.x_end, :]
 
-    # logger.info('Prediction Started')
+    # Perform and time the predection 
+    t_start = time.time()
     output_cropped = model.predict(input_cropped)
-    logger.info(f"Prediction finished for event t = {t_index}. Max value: {np.max(output_cropped):.2f}")
+    elapsed = int((time.time() - t_start)*1000)
+    logger.info(f"Prediction finished for event t = {t_index}. Duration = {elapsed} ms. Max value: {np.max(output_cropped):.2f}")
+    
     output_cropped = output_cropped[0, :, :, 0]
     output[crop_limits.y_start:crop_limits.y_end, crop_limits.x_start:crop_limits.x_end] = output_cropped
     
