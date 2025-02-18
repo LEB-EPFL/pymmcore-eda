@@ -34,8 +34,8 @@ class CropLimits():
         
 
 class AnalyserSettings:
-    # model_path: str = "//sb-nas1.rcp.epfl.ch/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
-    model_path: str = "/Volumes/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
+    model_path: str = "//sb-nas1.rcp.epfl.ch/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
+    # model_path: str = "/Volumes/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
     n_frames_model = 4
     n_fake_predictions = 3
     tile_size = 256 # used for tile-wise normalisation.
@@ -92,10 +92,10 @@ class Dummy_Analyser:
             # Perform the prediction in a separate thread
             predict_thread = Thread(target=dummy_predict, args=(img.copy(), event, metadata, self.hub, self.prediction_time, self.smart_event_period))
             
+            predict_thread.start()
+            
             # Store the thread to avoid spawning multiple threads
             self.predict_thread = predict_thread
-            
-            predict_thread.start()
 
         
         
@@ -195,6 +195,7 @@ def dummy_predict(img,event, metadata, hub, prediction_time, smart_event_period)
     output = img_norm
     
     # Sleep for a while to simulate the prediction time
+    t_start = time.time()
     time.sleep(prediction_time)
     elapsed = int((time.time() - t_start)*1000)
     logger.info(f"Dummy prediction finished for event t = {t}. Duration = {elapsed} ms. Max value: {np.max(output):.2f}")
