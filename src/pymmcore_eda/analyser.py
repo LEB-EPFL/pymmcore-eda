@@ -2,72 +2,138 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 import numpy as np
-from tifffile import imread, imwrite
-from pathlib import Path
-from tensorflow import keras
-import tensorflow as tf
 from threading import Thread
 from pymmcore_plus.metadata.schema import FrameMetaV1
 
-from smart_scan.helpers.function_helpers import normalize_tilewise_vectorized
-
+from src.pymmcore_eda.helpers.function_helpers import normalize_tilewise_vectorized
 from src.pymmcore_eda._logger import logger
-from src.pymmcore_eda.writer import AdaptiveWriter
+
+from enum import IntEnum
+
 from useq import MDAEvent
 
 if TYPE_CHECKING:
     import numpy as np
     from event_hub import EventHub
-    
+
+class CropLimits():
+    def __init__(self, image_shape:tuple, crop_size:int):
+        
+        H, W = image_shape
+        crop_size = min(crop_size, H, W)  # Restrict size if too large
+        
+        # Compute center coordinates
+        center_y, center_x = H // 2, W // 2
+        half_side = crop_size // 2
+
+        # Define mask boundaries
+        self.y_start, self.y_end = max(0, center_y - half_side), min(H, center_y + half_side)
+        self.x_start, self.x_end = max(0, center_x - half_side), min(W, center_x + half_side)
+        
 
 class AnalyserSettings:
-    model_path: str = "//sb-nas1.rcp.epfl.ch/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
+    # model_path: str = "//sb-nas1.rcp.epfl.ch/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
+    model_path: str = "/Volumes/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
+    n_frames_model = 4
+    n_fake_predictions = 3
+    tile_size = 256 # used for tile-wise normalisation.
+    crop_size = 512 # crop the images before feeding the model. Used to haste inference. 
+    image_shape = (2048,2048)
+    
+    # Calculated properties
+    crop_limits = CropLimits(image_shape, crop_size)
 
 
-@tf.keras.utils.register_keras_serializable(package='deep_events', name='wmse_loss')
-class WMSELoss(tf.keras.losses.Loss):
-    def __init__(self, pos_weight=1, name='wmse_loss'):
-        super().__init__(name=name)
-        self.pos_weight = pos_weight
+def emit_writer_signal(hub, event: MDAEvent, output, custom_channel : int = 2):
+    """
+    Emit the new_writer_frame signal.
 
-    def call(self, y_true, y_pred):
-        weight_vector = y_true * self.pos_weight + (1. - y_true)
-        return tf.reduce_mean(weight_vector * tf.square(y_true - y_pred))
+    Parameters:
+    hub (EventHub): The event hub to emit the signal.
+    event (MDAEvent): The event containing t_index and metadata about the frame.
+    output (np.ndarray): The output data to be emitted.
+    custom_channel (int, optional): The custom channel index. Defaults to 2.
+    """
+    t_index = event.index.get("t", 0)
+    
+    fake_event = MDAEvent(channel=event.channel, index={"t": t_index, "c": custom_channel}, min_start_time=0)
+    
+    output_save = np.array(output*1e4)
 
-    def get_config(self):
-        return {'pos_weight': self.pos_weight}
-tf.keras.utils.get_custom_objects().update({'WMSELoss': WMSELoss})
+    # output_save[0:256, 0:256] = 500
 
-@tf.keras.utils.register_keras_serializable()
-class WBCELoss(tf.keras.losses.Loss):
-    def __init__(self, pos_weight=1, name='wbce_loss'):
-        super().__init__(name=name)
-        self.pos_weight = pos_weight
-    def call(self, y_true, y_pred):
-        bce = tf.keras.backend.binary_crossentropy(y_true, y_pred)
-        # Apply the weights
-        weight_vector = y_true * self.pos_weight + (1. - y_true)
-        weighted_bce = weight_vector * bce
-        return tf.keras.backend.mean(weighted_bce)
+    output_save = np.transpose(output_save)
+    output_save = output_save.astype('uint16')
+    meta = FrameMetaV1(fake_event)
 
-    def get_config(self):
-        return {'pos_weight': self.pos_weight}    
-tf.keras.utils.get_custom_objects().update({'WBCELoss': WBCELoss})
+    hub.new_writer_frame.emit(output_save, fake_event, meta)
+
+
+class Dummy_Analyser:
+    """Analyse the image and produce a map for the interpreter."""
+    
+    def __init__(self, hub: EventHub):
+        self.hub = hub
+        self.hub.frameReady.connect(self._analyse)
+
+    def _analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict):
+
+        if event.index.get("c", 0) != 0:
+            return
+
+        # Determine the maximum possible value based on dtype
+        dtype = img.dtype
+        max_value = 1 
+        if np.issubdtype(dtype, np.integer):
+            max_value = np.iinfo(dtype).max
+        elif np.issubdtype(dtype, np.floating):
+            max_value = np.finfo(dtype).max
+
+        img[200,200] = 65520
+
+        # normalise and filter the image
+        img_norm = img/max_value
+        
+        threshold = 0.1
+        img_norm[img_norm <= threshold] = 0
+        
+        output = img_norm
+        print(f'Event score max: {np.max(output)}')
+        print(f'Event score min: {np.min(output)}')
+
+        # Emit the event score
+        self.hub.new_analysis.emit(output, event, metadata)
+
+        # Emit new_writer_frame to store the network output
+        emit_writer_signal(self.hub, event, output)
+
+        logger.info("Dummy Analyser")
 
 class Analyser:
     """Analyse the image and produce an event score map for the interpreter."""
 
     def __init__(self, hub: EventHub):
+        
+        # Import tensorflow here, so that we don't need to do it when using DummyAnalyser
+        from tensorflow import keras
+        
         settings = AnalyserSettings()
+        
         self.hub = hub
-        self.hub.frameReady.connect(self._analyse)
         self.model = keras.models.load_model(settings.model_path, compile = False)
-        print("Model loaded")
+        self.n_frames_model = settings.n_frames_model
+        self.predict_thread = None
+        self.output = np.zeros(settings.image_shape)
+        self.tile_size = settings.tile_size
+        self.n_fake_predictions = settings.n_fake_predictions
+
+        # Obtain the crop limits
+        self.crop_limits = settings.crop_limits
         
-        # Needed to write the network output on another channel
-        # self.writer = writer
+        # connect the frameReady signal to the analyse method
+        self.hub.frameReady.connect(self._analyse)
         
-        self.images = np.zeros((5, 2048, 2048))
+        self.images = np.zeros((self.n_frames_model+1, *settings.image_shape))
         # self.dummy_data = imread(Path("C:/Users/glinka/Desktop/stk_0010_FOV_1_MMStack_Default.ome.tif"))
         # img = self.dummy_data[0:3]
 
@@ -75,69 +141,64 @@ class Analyser:
         img = self.images
         input = img.swapaxes(0,2)
         input = np.expand_dims(input, 0)
-
-        # Crop all the images to haste prediction
-        input_cropped = input[:, 512:1536, 512:1536, :]
-        self.model.predict(input_cropped)
-        self.model.predict(input_cropped)
-        self.model.predict(input_cropped)
-        self.model.predict(input_cropped)
-
-
-
-
+        input_cropped = input[:, self.crop_limits.y_start:self.crop_limits.y_end, self.crop_limits.x_start:self.crop_limits.x_end, :]
+        for _ in range(self.n_fake_predictions):
+            self.model.predict(input_cropped)
+        
+    
     def _analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict):
         
-        # tile-wise normalisation of the image
-        tile_size = 256
-        try:
-            self.img = normalize_tilewise_vectorized(arr=img, tile_size=tile_size)
-        except AssertionError as e:
-            self.img = img
-            logger.info(f"Analyser: failed to perform tile-wise normalisation. {e}")
-        
-        self.event = event
-        self.metadata = metadata
-        if self.event.index.get("c", 0) != 0:
+        # Skip if not the first channel
+        if event.index.get("c", 0) != 0:
             return
+
+        # tile-wise normalisation of the image
+        try:
+            img = normalize_tilewise_vectorized(arr=img, tile_size=self.tile_size)
+        except AssertionError as e:
+            img = np.divide(img, np.max(img))
+            logger.info(f"Analyser: failed to perform tile-wise normalisation. {e}. Normalising the whole image instead.")
         
-        # logger.info('Fake data going in')
+        # For test, use dummy data
         # self.img = self.dummy_data[self.event.index.get("t", 0)]
-        self.images[-1] = self.img
-
-        def predict(images):
-            if self.event.index.get("t", 0) < 4:
-                return
-            logger.info('PREDICTING')
-            input = images.swapaxes(0,2)
-            input = np.expand_dims(input, 0)
-            input_cropped = input[:, 512:1536, 512:1536, :]
         
-            output_cropped = self.model.predict(input_cropped)
-            output_cropped = output_cropped[0, :, :, 0]
-            
-            output = np.zeros((2048, 2048))
-            output[512:1536, 512:1536] = output_cropped
-            print(f'Maximum value of the model output: {np.max(output)}\n')
-            # Write the network output output
-            # Generate a fake event and modify its channel
-            self.hub.new_analysis.emit(output, event, metadata)
-            
-            t_index = self.event.index.get("t", 0)
-            custom_channel = 2
-            fake_event = MDAEvent(channel=self.event.channel, index={"t": t_index, "c": custom_channel}, min_start_time=0)
-            
-            # Call writer.frameReady() to store the network output
-            output_save = np.array(output*1e4)
-            output_save = np.transpose(output_save)
-            output_save = output_save.astype('uint16')
+        # Add the current image to the list of images
+        self.images[-1] = img
 
-            meta = FrameMetaV1(fake_event)
-            # self.writer.frameReady(frame = output_save, event=fake_event, meta=meta)
-            self.hub.new_writer_frame.emit(output_save, fake_event, meta)
-            logger.info("Analyser")
+        # Allows only one prediction thread at a time
+        if self.predict_thread is None or not self.predict_thread.is_alive():
+            
+            t_index = event.index.get("t", 0)
+            
+            # Perform the prediction in a separate thread
+            predict_thread = Thread(target=predict, args=(self.images.copy(),t_index, event, self.model, self.hub, metadata, self.n_frames_model, self.output, self. crop_limits))
+            predict_thread.start()
 
+            # Store the thread to avoid spawning multiple threads
+            self.predict_thread = predict_thread
 
-        predict_thread = Thread(target=predict, args=(self.images.copy(),))
-        predict_thread.start()
+        # Shift the images in the list
         self.images[:-1] = self.images[1:]
+
+
+def predict(images,t_index, event, model, hub, metadata,n_frames_model, output, crop_limits):
+    
+    # Skip if the list of images is not full 
+    if event.index.get("t", 0) < n_frames_model:
+        return
+    
+    input = images.swapaxes(0,2)
+    input = np.expand_dims(input, 0)
+    input_cropped = input[:, crop_limits.y_start:crop_limits.y_end, crop_limits.x_start:crop_limits.x_end, :]
+
+    # logger.info('Prediction Started')
+    output_cropped = model.predict(input_cropped)
+    logger.info(f"Prediction finished for event t = {t_index}. Max value: {np.max(output_cropped):.2f}")
+    output_cropped = output_cropped[0, :, :, 0]
+    output[crop_limits.y_start:crop_limits.y_end, crop_limits.x_start:crop_limits.x_end] = output_cropped
+    
+    # Emits new_analysis signal
+    hub.new_analysis.emit(output, event, metadata)
+    
+    # Emits new_writer_frame signal to store the network output
+    emit_writer_signal(hub, event, output)

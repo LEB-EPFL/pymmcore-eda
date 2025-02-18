@@ -10,11 +10,10 @@ if TYPE_CHECKING:
 from src.pymmcore_eda._logger import logger
 
 class InterpreterSettings:
+    threshold: float = 0.9
+    square_semi_size: int = 60 #px
 
-    threshold: float = 0.8
-
-
-class Interpreter_widefield:
+class Interpreter_scan:
     """Get event score and produce a binary image that informs the actuator."""
 
     def __init__(self, hub: EventHub):
@@ -23,8 +22,12 @@ class Interpreter_widefield:
 
     def _interpret(self, net_out: np.ndarray, event: MDAEvent, metadata: dict):
         mask = net_out > InterpreterSettings.threshold
+        coordinates = np.argwhere(mask)
+        
+        for coord in coordinates:
+            x, y = coord[0], coord[1]
+            mask[x - InterpreterSettings.square_semi_size : x + InterpreterSettings.square_semi_size, y - InterpreterSettings.square_semi_size : y + InterpreterSettings.square_semi_size] = 1
         
         # Emit the interpretation result only if not empty
         if np.sum(mask) != 0:
             self.hub.new_interpretation.emit(mask, event, metadata)
-    
