@@ -74,12 +74,13 @@ def emit_writer_signal(hub, event: MDAEvent, output, custom_channel : int = 2):
 class Dummy_Analyser:
     """Analyse the image and produce a map for the interpreter."""
     
-    def __init__(self, hub: EventHub, smart_event_period: int = 5, prediction_time: float = 0.5):
+    def __init__(self, hub: EventHub, smart_event_period: int = 5, prediction_time: float = 0.2, threshold: float = 0.1):
         self.hub = hub
         self.hub.frameReady.connect(self._analyse)
         self.smart_event_period = smart_event_period
         self.prediction_time = prediction_time
         self.predict_thread = None
+        self.treshold = threshold
 
     def _analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict):
 
@@ -90,7 +91,7 @@ class Dummy_Analyser:
         if self.predict_thread is None or not self.predict_thread.is_alive():
             
             # Perform the prediction in a separate thread
-            predict_thread = Thread(target=dummy_predict, args=(img.copy(), event, metadata, self.hub, self.prediction_time, self.smart_event_period))
+            predict_thread = Thread(target=dummy_predict, args=(img.copy(), event, metadata, self.hub, self.prediction_time, self.smart_event_period, self.treshold))
             
             predict_thread.start()
             
@@ -172,7 +173,7 @@ class Analyser:
         # Shift the images in the list
         self.images[:-1] = self.images[1:]
 
-def dummy_predict(img,event, metadata, hub, prediction_time, smart_event_period):
+def dummy_predict(img,event, metadata, hub, prediction_time, smart_event_period, threshold):
     # Determine the maximum possible value based on dtype
     dtype = img.dtype
     max_value = 1 
@@ -184,14 +185,11 @@ def dummy_predict(img,event, metadata, hub, prediction_time, smart_event_period)
     # perform the dummy prediction every smart_event_period frames
     t = event.index.get("t", 0)
     if smart_event_period > 0 and t % smart_event_period == 0:
-        img[200,200] = 65520
+        img[200,200] = max_value
 
     # normalise and filter the image
     img_norm = img/max_value
-    
-    threshold = 0.1
     img_norm[img_norm <= threshold] = 0
-    
     output = img_norm
     
     # Sleep for a while to simulate the prediction time
