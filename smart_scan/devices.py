@@ -31,6 +31,27 @@ class Device(ABC):
         """Returns the connection status"""
 
 
+class GalvoScannersException(Exception):
+    """Base class for exceptions in this module."""
+
+
+class DummyScanners(Device):
+    """This is the class for the dummy scanners used to perform (smart) scans."""
+
+    def __init__(self) -> None:
+        pass
+    
+    def connect(self):
+        """Connects the dummy mirror system."""
+
+    def disconnect(self):
+        """Disconnects the dummy mirror system."""
+
+    def isConnected(self) -> bool:
+        """Returns the connection status of the dummy mirror system."""
+        return True
+
+
 class Galvo_Scanners(Device):
     """This is the class for the galvanometric mirrors used to perform (smart) scans."""
 
@@ -64,10 +85,14 @@ class Galvo_Scanners(Device):
                 )
                 self._isConnected = True
 
-            except RuntimeError:
-                print("connection error")
+            except RuntimeError as e:
+                raise GalvoScannersException("Could not connect Analog Discovery") from e
                 loggingHelper.displayMessage(logStrings.GALVO_1)
                 logger.error(logStrings.GALVO_1)
+
+            except Exception as e:
+                raise GalvoScannersException("Could not load dll. Do you have the Analog Discovery SDK installed?") from e
+            
 
     def disconnect(self):
         """Disconnects the galvo mirror system."""

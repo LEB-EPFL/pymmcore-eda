@@ -2,7 +2,7 @@ from pymmcore_plus import CMMCorePlus
 from pymmcore_plus.mda import MDAEngine
 import useq
 from smart_scan.helpers.function_helpers import ScanningStragies
-from smart_scan.devices import Galvo_Scanners
+from smart_scan.devices import Galvo_Scanners, Device, DummyScanners
 from enum import IntEnum
 import numpy as np
 import threading
@@ -26,7 +26,7 @@ class GalvoParams(IntEnum):
 class CustomEngine(MDAEngine):
 
 
-    def __init__(self, mmc: CMMCorePlus, use_hardware_sequencing: bool = True) -> None:
+    def __init__(self, mmc: CMMCorePlus, galvo_scanners : Device, use_hardware_sequencing: bool = True) -> None:
         self._mmc = mmc
         self.use_hardware_sequencing = use_hardware_sequencing
 
@@ -52,7 +52,7 @@ class CustomEngine(MDAEngine):
         # in the channel group.
         self._config_device_props: dict[str, Sequence[tuple[str, str]]] = {}
 
-        self._gs = Galvo_Scanners()
+        self._gs = galvo_scanners
 
         print("In CustomEngine __init__")
 
