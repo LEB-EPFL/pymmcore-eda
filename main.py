@@ -6,7 +6,8 @@ timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 unique_log_file = Path(os.path.expanduser(f"~\\AppData\\Local\\pymmcore-plus\\pymmcore-plus\\logs\\pymmcore-plus_{timestamp}.log"))
 #os.environ['PYMM_LOG_FILE'] = str(unique_log_file)
 
-os.environ['PYMM_LOG_FILE'] = str(Path("\\Users\\giorgio\\Desktop\\"))
+os.environ['PYMM_LOG_FILE'] = str(unique_log_file)
+# os.environ['PYMM_LOG_FILE'] = str(Path("\\Users\\giorgio\\Desktop\\"))
 
 from pymmcore_plus import CMMCorePlus
 
@@ -29,20 +30,23 @@ from pathlib import Path
 
 # Select the use case
 use_dummy_galvo = True      # If True, dummy galvo scanners are used
-use_microscope = False      
+use_microscope = True      
 use_smart_scan = False      # If False, widefield is used
-n_smart_events = 10         # Number of smart events generated after event detection
+n_smart_events = 3         # Number of smart events generated after event detection
 
-# Dummy analysis and parameters
+# Dummy analysis toggle.
 use_dummy_analysis = False   # If False, tensorflow is used to predict events
-smart_event_period = 10
-prediction_time = 0.8
-threshold = 0.9
+
+# Dummy Analysis parameters
+prediction_time = 0.3
+
+# Interpreter parameters
+smart_event_period = 5      # enforce a smart event generation evert smart_event_period frames. 0 if not enforcing
 
 # define the MDA sequence
 mda_sequence = MDASequence(
     channels=(Channel(config="GFP (470nm)",exposure=100),),
-    time_plan={"interval": 1, "loops": 5},
+    time_plan={"interval": 2, "loops": 20},
     autoShutter=False,
 )
 
@@ -88,14 +92,14 @@ writer = AdaptiveWriter(path=loc, delete_existing=True)
 # initialise all components
 hub = EventHub(mmc.mda, writer=writer)
 queue_manager = QueueManager()
-analyser = Dummy_Analyser(hub, smart_event_period=smart_event_period, prediction_time=prediction_time, threshold=threshold) if use_dummy_analysis else Analyser(hub)
+analyser = Dummy_Analyser(hub, prediction_time=prediction_time) if use_dummy_analysis else Analyser(hub)
 base_actuator = MDAActuator(queue_manager, mda_sequence)
 
 if use_smart_scan:
-    interpreter = Interpreter_scan(hub)
+    interpreter = Interpreter_scan(hub, smart_event_period = smart_event_period)
     smart_actuator = SmartActuator_scan(queue_manager, hub, n_events=n_smart_events)
 else:
-    interpreter = Interpreter_widefield(hub)
+    interpreter = Interpreter_widefield(hub, smart_event_period = smart_event_period)
     smart_actuator = SmartActuator_widefield(queue_manager, hub, n_events=n_smart_events)
 
 # Start and manage the acquisition
