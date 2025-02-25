@@ -37,7 +37,7 @@ class AnalyserSettings:
     model_path: str = "//sb-nas1.rcp.epfl.ch/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
     # model_path: str = "/Volumes/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
     n_frames_model = 4
-    n_fake_predictions = 3
+    n_fake_predictions = 3      # number of initial fake predictions. The first ones are always longer
     tile_size = 256 # used for tile-wise normalisation.
     crop_size = 512 # crop the images before feeding the model. Used to haste inference. 
     image_shape = (2048,2048)
@@ -74,13 +74,11 @@ def emit_writer_signal(hub, event: MDAEvent, output, custom_channel : int = 2):
 class Dummy_Analyser:
     """Analyse the image and produce a map for the interpreter."""
     
-    def __init__(self, hub: EventHub, smart_event_period: int = 5, prediction_time: float = 0.2, threshold: float = 0.1):
+    def __init__(self, hub: EventHub, prediction_time: float = 0.2):
         self.hub = hub
         self.hub.frameReady.connect(self._analyse)
-        self.smart_event_period = smart_event_period
         self.prediction_time = prediction_time
         self.predict_thread = None
-        self.treshold = threshold
 
     def _analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict):
 
@@ -91,7 +89,7 @@ class Dummy_Analyser:
         if self.predict_thread is None or not self.predict_thread.is_alive():
             
             # Perform the prediction in a separate thread
-            predict_thread = Thread(target=dummy_predict, args=(img.copy(), event, metadata, self.hub, self.prediction_time, self.smart_event_period, self.treshold))
+            predict_thread = Thread(target=dummy_predict, args=(img.copy(), event, metadata, self.hub, self.prediction_time))
             
             predict_thread.start()
             
@@ -128,7 +126,7 @@ class Analyser:
         # self.dummy_data = imread(Path("C:/Users/glinka/Desktop/stk_0010_FOV_1_MMStack_Default.ome.tif"))
         # img = self.dummy_data[0:3]
 
-        # Perform a few first fake predictions - take a long time 
+        # Perform a few first fake predictions - it takes a long time 
         img = self.images
         input = img.swapaxes(0,2)
         input = np.expand_dims(input, 0)
@@ -173,7 +171,7 @@ class Analyser:
         # Shift the images in the list
         self.images[:-1] = self.images[1:]
 
-def dummy_predict(img,event, metadata, hub, prediction_time, smart_event_period, threshold):
+def dummy_predict(img,event, metadata, hub, prediction_time):
     # Determine the maximum possible value based on dtype
     dtype = img.dtype
     max_value = 1 
@@ -182,20 +180,14 @@ def dummy_predict(img,event, metadata, hub, prediction_time, smart_event_period,
     elif np.issubdtype(dtype, np.floating):
         max_value = np.finfo(dtype).max
 
-    # perform the dummy prediction every smart_event_period frames
-    t = event.index.get("t", 0)
-    if smart_event_period > 0 and t % smart_event_period == 0:
-        img[200,200] = max_value
-
-    # normalise and filter the image
-    img_norm = img/max_value
-    img_norm[img_norm <= threshold] = 0
-    output = img_norm
+    # normalise the image
+    output = img/max_value
     
     # Sleep for a while to simulate the prediction time
     t_start = time.time()
     time.sleep(prediction_time)
     elapsed = int((time.time() - t_start)*1000)
+    t = event.index.get("t", 0) 
     logger.info(f"Dummy prediction finished for event t = {t}. Duration = {elapsed} ms. Max value: {np.max(output):.2f}")
 
     # Emit the event score
