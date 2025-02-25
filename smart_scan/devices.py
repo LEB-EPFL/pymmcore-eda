@@ -13,7 +13,7 @@ import time
 logger = loggingHelper.createLogger(loggerName=__name__)
 
 
-class Device(ABC):
+class Scanner(ABC):
     """This is the superclass for all the hardware devices to be connected with the software."""
 
     ID: int  # how to impose properties to subclass
@@ -30,12 +30,16 @@ class Device(ABC):
     def isConnected(self):
         """Returns the connection status"""
 
+    @abstractmethod
+    def scan(self):
+        """Performs a scan"""
+    
 
 class GalvoScannersException(Exception):
     """Base class for exceptions in this module."""
 
 
-class DummyScanners(Device):
+class DummyScanners(Scanner):
     """This is the class for the dummy scanners used to perform (smart) scans."""
 
     def __init__(self) -> None:
@@ -51,8 +55,10 @@ class DummyScanners(Device):
         """Returns the connection status of the dummy mirror system."""
         return True
 
+    def scan(self, mask, pixelsize, scan_strategy, duration, triggered, timeout) -> bool:
+        """Perform a dummy scan."""
 
-class Galvo_Scanners(Device):
+class Galvo_Scanners(Scanner):
     """This is the class for the galvanometric mirrors used to perform (smart) scans."""
 
     def __init__(self) -> None:

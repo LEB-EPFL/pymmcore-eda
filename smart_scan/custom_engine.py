@@ -2,7 +2,7 @@ from pymmcore_plus import CMMCorePlus
 from pymmcore_plus.mda import MDAEngine
 import useq
 from smart_scan.helpers.function_helpers import ScanningStragies
-from smart_scan.devices import Galvo_Scanners, Device, DummyScanners
+from smart_scan.devices import Galvo_Scanners, Scanner, DummyScanners
 from enum import IntEnum
 import numpy as np
 import threading
@@ -26,7 +26,7 @@ class GalvoParams(IntEnum):
 class CustomEngine(MDAEngine):
 
 
-    def __init__(self, mmc: CMMCorePlus, galvo_scanners : Device, use_hardware_sequencing: bool = True) -> None:
+    def __init__(self, mmc: CMMCorePlus, galvo_scanners : Scanner, use_hardware_sequencing: bool = True) -> None:
         self._mmc = mmc
         self.use_hardware_sequencing = use_hardware_sequencing
 
@@ -54,15 +54,12 @@ class CustomEngine(MDAEngine):
 
         self._gs = galvo_scanners
 
-        print("In CustomEngine __init__")
-
     def setup_sequence(self, sequence: useq.MDASequence) -> None:
         """Setup state of system (hardware, etc.) before an MDA is run.
 
         This method is called once at the beginning of a sequence.
         (The sequence object needn't be used here if not necessary)
         """
-        # print('--> in setup_sequence')
         self._gs.connect()
 
 
@@ -74,7 +71,6 @@ class CustomEngine(MDAEngine):
         The engine should be in a state where it can call `exec_event`
         without any additional preparation.
         """
-        # print('--> in setup_event')
         
         if str(CustomKeyes.GALVO.value) in event.metadata:
             self._smart_scan_setup(event.metadata)
@@ -93,16 +89,13 @@ class CustomEngine(MDAEngine):
         executing the event. The default assumption is to acquire an image,
         but more elaborate events will be possible.
         """
-        # print('--> in exec_event')
         return super().exec_event(event)
 
     def teardown_sequence(self, sequence: useq.MDASequence):
-        # print('--> in teardown_sequence')
         self._gs.disconnect()
 
 
     def _smart_scan_setup(self, metadata: dict) -> None:
-        # print(f"--> Setting up the galvanometric mirrors")
         galvo_string = str(CustomKeyes.GALVO.value)
 
         # Define a wrapper function for the scan operation
