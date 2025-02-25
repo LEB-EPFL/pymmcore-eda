@@ -7,6 +7,8 @@ import numpy as np
 
 from src.pymmcore_eda.time_machine import TimeMachine
 
+import time
+
 if TYPE_CHECKING:
     from useq import MDAEvent
 
@@ -37,6 +39,9 @@ class QueueManager:
     def register_event(self, event):
         """Actuators call this to request an event to be put on the event_register."""
         
+        start_time = time.time()
+
+
         # Offset index
         if event.index.get("t", 0) < 0:
             keys = list(self.event_register.keys())
@@ -84,6 +89,9 @@ class QueueManager:
 
         for k, v in event.index.items():
             self._axis_max[k] = max(self._axis_max.get(k, 0), v)
+        
+        elapsed = int((time.time() - start_time)*1000)
+        print(f'Event registered, Elapsed time: {elapsed}.')
 
     def queue_events(self, start_time: float):
         """Put events on the queue that are due to be acquired.
