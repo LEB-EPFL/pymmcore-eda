@@ -32,21 +32,24 @@ from pathlib import Path
 use_dummy_galvo = True      # If True, dummy galvo scanners are used
 use_microscope = True      
 use_smart_scan = False      # If False, widefield is used
-n_smart_events = 3         # Number of smart events generated after event detection
+n_smart_events = 10       # Number of smart events generated after event detection
+
+# Empty the pymmcore-plus queue at the end of the series of generated smart events. Can help achieve a target frame-rate, at the expense of skipped frames
+skip_frames = True   
 
 # Dummy analysis toggle.
-use_dummy_analysis = False   # If False, tensorflow is used to predict events
+use_dummy_analysis = True   # If False, tensorflow is used to predict events
 
 # Dummy Analysis parameters
 prediction_time = 0.3
 
 # Interpreter parameters
-smart_event_period = 5      # enforce a smart event generation evert smart_event_period frames. 0 if not enforcing
+smart_event_period = 2      # enforce a smart event generation evert smart_event_period frames. 0 if not enforcing
 
 # define the MDA sequence
 mda_sequence = MDASequence(
     channels=(Channel(config="GFP (470nm)",exposure=100),),
-    time_plan={"interval": 1, "loops": 30},
+    time_plan={"interval": 1, "loops": 10},
     keep_shutter_open_across = {'t', 'c'},
 )
 
@@ -97,10 +100,10 @@ base_actuator = MDAActuator(queue_manager, mda_sequence)
 
 if use_smart_scan:
     interpreter = Interpreter_scan(hub, smart_event_period = smart_event_period)
-    smart_actuator = SmartActuator_scan(queue_manager, hub, n_events=n_smart_events)
+    smart_actuator = SmartActuator_scan(queue_manager, hub, n_events=n_smart_events, skip_frames=skip_frames)
 else:
     interpreter = Interpreter_widefield(hub, smart_event_period = smart_event_period)
-    smart_actuator = SmartActuator_widefield(queue_manager, hub, n_events=n_smart_events)
+    smart_actuator = SmartActuator_widefield(queue_manager, hub, n_events=n_smart_events, skip_frames=skip_frames)
 
 # Start and manage the acquisition
 mmc.mda._reset_event_timer()
