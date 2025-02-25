@@ -46,8 +46,8 @@ smart_event_period = 5      # enforce a smart event generation evert smart_event
 # define the MDA sequence
 mda_sequence = MDASequence(
     channels=(Channel(config="GFP (470nm)",exposure=100),),
-    time_plan={"interval": 2, "loops": 20},
-    autoShutter=False,
+    time_plan={"interval": 1, "loops": 30},
+    keep_shutter_open_across = {'t', 'c'},
 )
 
 ########################################
