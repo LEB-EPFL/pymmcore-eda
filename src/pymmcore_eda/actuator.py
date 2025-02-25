@@ -65,6 +65,9 @@ class SmartActuator_widefield:
                             keep_shutter_open=True, # to hasten acquisition
                             )
             self.queue_manager.register_event(curr_event)
+        
+        # After the smart events are generated
+        self.queue_manager.empty_queue()
 
 
 class ButtonActuator:

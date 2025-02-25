@@ -39,9 +39,6 @@ class QueueManager:
     def register_event(self, event):
         """Actuators call this to request an event to be put on the event_register."""
         
-        start_time = time.time()
-
-
         # Offset index
         if event.index.get("t", 0) < 0:
             keys = list(self.event_register.keys())
@@ -89,9 +86,6 @@ class QueueManager:
 
         for k, v in event.index.items():
             self._axis_max[k] = max(self._axis_max.get(k, 0), v)
-        
-        elapsed = int((time.time() - start_time)*1000)
-        print(f'Event registered, Elapsed time: {elapsed}.')
 
     def queue_events(self, start_time: float):
         """Put events on the queue that are due to be acquired.
@@ -124,8 +118,17 @@ class QueueManager:
         """Stop the sequence after the events currently on the queue."""
         self.q.put(self.stop)
 
+    def empty_queue(self):
+        """Empty the queue."""
+        i = 0
+        while not self.q.empty():
+            self.q.get(False)
+            i+=1
+        print(f"Emptied the queue of {i} events.")
+
     def _set_timer_for_event(self, event: MDAEvent):
         """Set or reset the timer for an event."""
+        
         #If we are the time 0 event and we reset, wait for potential other events to be queued
         if all([event.min_start_time == 0,
                event.reset_event_timer,
