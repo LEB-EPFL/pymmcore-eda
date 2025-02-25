@@ -34,7 +34,7 @@ use_smart_scan = False      # If False, widefield is used
 n_smart_events = 10         # Number of smart events generated after event detection
 
 # Dummy analysis and parameters
-use_dummy_analysis = True   # If True, dummy analysis is used
+use_dummy_analysis = False   # If False, tensorflow is used to predict events
 smart_event_period = 10
 prediction_time = 0.8
 threshold = 0.9
@@ -46,24 +46,27 @@ mda_sequence = MDASequence(
     autoShutter=False,
 )
 
+########################################
 
-####################
 mmc = CMMCorePlus()
 mmc.setDeviceAdapterSearchPaths(
     [*list(mmc.getDeviceAdapterSearchPaths())]
 )
 
-
 if use_microscope:
-    mmc.loadSystemConfiguration("C:/Control_2/Zeiss-microscope/240715_ZeissAxioObserver7.cfg")
+    try:
+        mmc.loadSystemConfiguration("C:/Control_2/Zeiss-microscope/240715_ZeissAxioObserver7.cfg")
 
-    mmc.setProperty("Prime", "Trigger-Expose Out-Mux", 1)
-    mmc.setProperty("Prime", "ExposeOutMode", "All Rows")
-    
-    mmc.setProperty("pE-800", "Global State", 0)
-    mmc.setConfig("Channel","Brightfield")
-    mmc.setProperty("pE-800", "Global State", 0)
-    mmc.setConfig("Channel","DAPI (365nm)")
+        mmc.setProperty("Prime", "Trigger-Expose Out-Mux", 1)
+        mmc.setProperty("Prime", "ExposeOutMode", "All Rows")
+        
+        mmc.setProperty("pE-800", "Global State", 0)
+        mmc.setConfig("Channel","Brightfield")
+        mmc.setProperty("pE-800", "Global State", 0)
+        mmc.setConfig("Channel","DAPI (365nm)")
+    except FileNotFoundError as e:
+        print(f'Failed to load the Microscope System Configuration: \n{e}')
+        raise
 
 else: 
     mmc.loadSystemConfiguration()
