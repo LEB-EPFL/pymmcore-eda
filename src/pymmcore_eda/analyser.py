@@ -34,8 +34,8 @@ class CropLimits():
         
 
 class AnalyserSettings:
-    # model_path: str = "//sb-nas1.rcp.epfl.ch/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
-    model_path: str = "/Volumes/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
+    model_path: str = "//sb-nas1.rcp.epfl.ch/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
+    # model_path: str = "/Volumes/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
     n_frames_model = 4
     n_fake_predictions = 3      # number of initial fake predictions. The first ones are always longer
     tile_size = 256 # used for tile-wise normalisation.

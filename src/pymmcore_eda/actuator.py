@@ -44,11 +44,12 @@ class MDAActuator:
 class SmartActuator_widefield:
     """Actuator that subscribes to new_interpretation and reacts to incoming events."""
 
-    def __init__(self, queue_manager: QueueManager, hub: EventHub, n_events: int = 3):
+    def __init__(self, queue_manager: QueueManager, hub: EventHub, n_events: int = 3, skip_frames: bool = False):
         self.queue_manager = queue_manager
         self.hub = hub
         self.hub.new_interpretation.connect(self._act)
         self.n_events = n_events
+        self.skip_frames= skip_frames
 
     def _act(self, interpretation, event, metadata):
         
@@ -66,8 +67,8 @@ class SmartActuator_widefield:
                             )
             self.queue_manager.register_event(curr_event)
         
-        # After the smart events are generated
-        self.queue_manager.empty_queue()
+        # Empty the queue after the smart events are generated
+        if self.skip_frames: self.queue_manager.empty_queue()
 
 
 class ButtonActuator:

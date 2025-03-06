@@ -37,8 +37,11 @@ from pymmcore_widgets.views import ImagePreview
 use_dummy_galvo = True      # If True, dummy galvo scanners are used
 use_microscope = False      
 use_smart_scan = False      # If False, widefield is used
-n_smart_events = 7         # Number of smart events generated after event detection
+n_smart_events = 10       # Number of smart events generated after event detection
 show_live_preview = True    # If True, the live preview is shown
+
+# Empty the pymmcore-plus queue at the end of the series of generated smart events. Can help achieve a target frame-rate, at the expense of skipped frames
+skip_frames = True   
 
 # Dummy analysis toggle.
 use_dummy_analysis = True   # If False, tensorflow is used to predict events
@@ -47,12 +50,12 @@ use_dummy_analysis = True   # If False, tensorflow is used to predict events
 prediction_time = 0.8
 
 # Interpreter parameters
-smart_event_period = 5      # enforce a smart event generation evert smart_event_period frames. 0 if not enforcing
+smart_event_period = 2      # enforce a smart event generation evert smart_event_period frames. 0 if not enforcing
 
 # define the MDA sequence
 mda_sequence = MDASequence(
-    channels=(Channel(config="GFP (470nm)",exposure=10),),
-    time_plan={"interval": 0.1, "loops": 50},
+    channels=(Channel(config="GFP (470nm)",exposure=100),),
+    time_plan={"interval": 1, "loops": 10},
     keep_shutter_open_across = {'t', 'c'},
 )
 
@@ -126,10 +129,10 @@ base_actuator = MDAActuator(queue_manager, mda_sequence)
 
 if use_smart_scan:
     interpreter = Interpreter_scan(hub, smart_event_period = smart_event_period)
-    smart_actuator = SmartActuator_scan(queue_manager, hub, n_events=n_smart_events)
+    smart_actuator = SmartActuator_scan(queue_manager, hub, n_events=n_smart_events, skip_frames=skip_frames)
 else:
     interpreter = Interpreter_widefield(hub, smart_event_period = smart_event_period)
-    smart_actuator = SmartActuator_widefield(queue_manager, hub, n_events=n_smart_events)
+    smart_actuator = SmartActuator_widefield(queue_manager, hub, n_events=n_smart_events, skip_frames=skip_frames)
 
 # Optionally show the live preview
 if show_live_preview:
