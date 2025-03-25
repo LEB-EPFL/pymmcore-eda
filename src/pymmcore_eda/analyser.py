@@ -12,6 +12,8 @@ from enum import IntEnum
 
 from useq import MDAEvent
 
+import time
+
 if TYPE_CHECKING:
     import numpy as np
     from event_hub import EventHub
@@ -32,10 +34,10 @@ class CropLimits():
         
 
 class AnalyserSettings:
-    # model_path: str = "//sb-nas1.rcp.epfl.ch/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
-    model_path: str = "/Volumes/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
+    model_path: str = "//sb-nas1.rcp.epfl.ch/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
+    # model_path: str = "/Volumes/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
     n_frames_model = 4
-    n_fake_predictions = 3
+    n_fake_predictions = 3      # number of initial fake predictions. The first ones are always longer
     tile_size = 256 # used for tile-wise normalisation.
     crop_size = 512 # crop the images before feeding the model. Used to haste inference. 
     image_shape = (2048,2048)
@@ -72,43 +74,30 @@ def emit_writer_signal(hub, event: MDAEvent, output, custom_channel : int = 2):
 class Dummy_Analyser:
     """Analyse the image and produce a map for the interpreter."""
     
-    def __init__(self, hub: EventHub):
+    def __init__(self, hub: EventHub, prediction_time: float = 0.2):
         self.hub = hub
         self.hub.frameReady.connect(self._analyse)
+        self.prediction_time = prediction_time
+        self.predict_thread = None
 
     def _analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict):
 
         if event.index.get("c", 0) != 0:
             return
 
-        # Determine the maximum possible value based on dtype
-        dtype = img.dtype
-        max_value = 1 
-        if np.issubdtype(dtype, np.integer):
-            max_value = np.iinfo(dtype).max
-        elif np.issubdtype(dtype, np.floating):
-            max_value = np.finfo(dtype).max
+        # Allows only one prediction thread at a time
+        if self.predict_thread is None or not self.predict_thread.is_alive():
+            
+            # Perform the prediction in a separate thread
+            predict_thread = Thread(target=dummy_predict, args=(img.copy(), event, metadata, self.hub, self.prediction_time))
+            
+            predict_thread.start()
+            
+            # Store the thread to avoid spawning multiple threads
+            self.predict_thread = predict_thread
 
-        img[200,200] = 65520
-
-        # normalise and filter the image
-        img_norm = img/max_value
         
-        threshold = 0.1
-        img_norm[img_norm <= threshold] = 0
         
-        output = img_norm
-        print(f'Event score max: {np.max(output)}')
-        print(f'Event score min: {np.min(output)}')
-
-        # Emit the event score
-        self.hub.new_analysis.emit(output, event, metadata)
-
-        # Emit new_writer_frame to store the network output
-        emit_writer_signal(self.hub, event, output)
-
-        logger.info("Dummy Analyser")
-
 class Analyser:
     """Analyse the image and produce an event score map for the interpreter."""
 
@@ -137,7 +126,7 @@ class Analyser:
         # self.dummy_data = imread(Path("C:/Users/glinka/Desktop/stk_0010_FOV_1_MMStack_Default.ome.tif"))
         # img = self.dummy_data[0:3]
 
-        # Perform a few first fake predictions - take a long time 
+        # Perform a few first fake predictions - it takes a long time 
         img = self.images
         input = img.swapaxes(0,2)
         input = np.expand_dims(input, 0)
@@ -172,13 +161,40 @@ class Analyser:
             
             # Perform the prediction in a separate thread
             predict_thread = Thread(target=predict, args=(self.images.copy(),t_index, event, self.model, self.hub, metadata, self.n_frames_model, self.output, self. crop_limits))
-            predict_thread.start()
-
+            
             # Store the thread to avoid spawning multiple threads
             self.predict_thread = predict_thread
+            
+            predict_thread.start()
+
 
         # Shift the images in the list
         self.images[:-1] = self.images[1:]
+
+def dummy_predict(img,event, metadata, hub, prediction_time):
+    # Determine the maximum possible value based on dtype
+    dtype = img.dtype
+    max_value = 1 
+    if np.issubdtype(dtype, np.integer):
+        max_value = np.iinfo(dtype).max
+    elif np.issubdtype(dtype, np.floating):
+        max_value = np.finfo(dtype).max
+
+    # normalise the image
+    output = img/max_value
+    
+    # Sleep for a while to simulate the prediction time
+    t_start = time.time()
+    time.sleep(prediction_time)
+    elapsed = int((time.time() - t_start)*1000)
+    t = event.index.get("t", 0) 
+    logger.info(f"Dummy prediction finished for event t = {t}. Duration = {elapsed} ms. Max value: {np.max(output):.2f}")
+
+    # Emit the event score
+    hub.new_analysis.emit(output, event, metadata)
+
+    # Emit new_writer_frame to store the network output
+    emit_writer_signal(hub, event, output)
 
 
 def predict(images,t_index, event, model, hub, metadata,n_frames_model, output, crop_limits):
@@ -191,9 +207,12 @@ def predict(images,t_index, event, model, hub, metadata,n_frames_model, output, 
     input = np.expand_dims(input, 0)
     input_cropped = input[:, crop_limits.y_start:crop_limits.y_end, crop_limits.x_start:crop_limits.x_end, :]
 
-    # logger.info('Prediction Started')
+    # Perform and time the predection 
+    t_start = time.time()
     output_cropped = model.predict(input_cropped)
-    logger.info(f"Prediction finished for event t = {t_index}. Max value: {np.max(output_cropped):.2f}")
+    elapsed = int((time.time() - t_start)*1000)
+    logger.info(f"Prediction finished for event t = {t_index}. Duration = {elapsed} ms. Max value: {np.max(output_cropped):.2f}")
+    
     output_cropped = output_cropped[0, :, :, 0]
     output[crop_limits.y_start:crop_limits.y_end, crop_limits.x_start:crop_limits.x_end] = output_cropped
     

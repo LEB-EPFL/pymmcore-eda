@@ -13,7 +13,7 @@ import time
 logger = loggingHelper.createLogger(loggerName=__name__)
 
 
-class Device(ABC):
+class Scanner(ABC):
     """This is the superclass for all the hardware devices to be connected with the software."""
 
     ID: int  # how to impose properties to subclass
@@ -30,8 +30,35 @@ class Device(ABC):
     def isConnected(self):
         """Returns the connection status"""
 
+    @abstractmethod
+    def scan(self):
+        """Performs a scan"""
+    
 
-class Galvo_Scanners(Device):
+class GalvoScannersException(Exception):
+    """Base class for exceptions in this module."""
+
+
+class DummyScanners(Scanner):
+    """This is the class for the dummy scanners used to perform (smart) scans."""
+
+    def __init__(self) -> None:
+        pass
+    
+    def connect(self):
+        """Connects the dummy mirror system."""
+
+    def disconnect(self):
+        """Disconnects the dummy mirror system."""
+
+    def isConnected(self) -> bool:
+        """Returns the connection status of the dummy mirror system."""
+        return True
+
+    def scan(self, mask, pixelsize, scan_strategy, duration, triggered, timeout) -> bool:
+        """Perform a dummy scan."""
+
+class Galvo_Scanners(Scanner):
     """This is the class for the galvanometric mirrors used to perform (smart) scans."""
 
     def __init__(self) -> None:
@@ -64,10 +91,14 @@ class Galvo_Scanners(Device):
                 )
                 self._isConnected = True
 
-            except RuntimeError:
-                print("connection error")
+            except RuntimeError as e:
+                raise GalvoScannersException("Could not connect Analog Discovery") from e
                 loggingHelper.displayMessage(logStrings.GALVO_1)
                 logger.error(logStrings.GALVO_1)
+
+            except Exception as e:
+                raise GalvoScannersException("Could not load dll. Do you have the Analog Discovery SDK installed?") from e
+            
 
     def disconnect(self):
         """Disconnects the galvo mirror system."""

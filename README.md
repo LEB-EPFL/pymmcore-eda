@@ -5,7 +5,7 @@ Smart microscopy library at LEB EPFL
 ## Installation using conda
 1. From a conda terminal, create conda environment:
     ```
-    conda create -n pymmcore-eda-env python<3.11
+    conda create -n pymmcore-eda-env 'python<3.11'
     ```
 2. Activate the conda environment:
     ```

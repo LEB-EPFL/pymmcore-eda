@@ -7,6 +7,8 @@ import numpy as np
 
 from src.pymmcore_eda.time_machine import TimeMachine
 
+import time
+
 if TYPE_CHECKING:
     from useq import MDAEvent
 
@@ -116,8 +118,17 @@ class QueueManager:
         """Stop the sequence after the events currently on the queue."""
         self.q.put(self.stop)
 
+    def empty_queue(self):
+        """Empty the queue."""
+        i = 0
+        while not self.q.empty():
+            self.q.get(False)
+            i+=1
+        print(f"Emptied the queue of {i} events.")
+
     def _set_timer_for_event(self, event: MDAEvent):
         """Set or reset the timer for an event."""
+        
         #If we are the time 0 event and we reset, wait for potential other events to be queued
         if all([event.min_start_time == 0,
                event.reset_event_timer,
