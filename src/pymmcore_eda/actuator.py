@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from useq import MDAEvent, Channel
 import numpy as np
 
-from pymmcore_eda._logger import logger
+from src.pymmcore_eda._logger import logger
 from smart_scan.custom_engine import CustomKeyes, GalvoParams
 from smart_scan.helpers.function_helpers import ScanningStragies
 
@@ -29,7 +29,7 @@ class MDAActuator:
         self.n_channels = mda_sequence.sizes.get("c", 1)
         self.channels = self.queue_manager.register_actuator(self, self.n_channels)
 
-    def _run(self, wait=True):
+    def _run(self):
         # Adjust the channels to the ones supposed to be pushed to
         for event in self.mda_sequence:
             new_index = event.index.copy()
@@ -40,6 +40,35 @@ class MDAActuator:
             self.queue_manager.register_event(event)
         if self.wait:
             time.sleep(event.min_start_time + 3)
+
+class SmartActuator_widefield:
+    """Actuator that subscribes to new_interpretation and reacts to incoming events."""
+
+    def __init__(self, queue_manager: QueueManager, hub: EventHub, n_events: int = 3, skip_frames: bool = False):
+        self.queue_manager = queue_manager
+        self.hub = hub
+        self.hub.new_interpretation.connect(self._act)
+        self.n_events = n_events
+        self.skip_frames= skip_frames
+
+    def _act(self, interpretation, event, metadata):
+        
+        print("\n")
+        t_index = event.index.get("t", 0)
+        logger.info(f'Generating {self.n_events} smart Widefield frames. t_index = {t_index}')
+        print("\n")
+
+        for i in range(1,self.n_events+1):
+
+            curr_event = MDAEvent(channel={"config":"Cy5 (635nm)", "exposure": 100}, 
+                            index={"t": -i, "c": 1}, 
+                            min_start_time=0,
+                            keep_shutter_open=True, # to hasten acquisition
+                            )
+            self.queue_manager.register_event(curr_event)
+        
+        # Empty the queue after the smart events are generated
+        if self.skip_frames: self.queue_manager.empty_queue()
 
 
 class ButtonActuator:
@@ -69,37 +98,3 @@ class MapStorage:
     def get_map(self):
         return self.scan_map
 
-class SmartActuator:
-    """Actuator that subscribes to new_interpretation and reacts to incoming events."""
-
-    def __init__(self, queue_manager: QueueManager, hub: EventHub):
-        self.queue_manager = queue_manager
-        self.hub = hub
-        self.hub.new_interpretation.connect(self._act)
-        self.storage = MapStorage()
-
-    def _act(self, image, event, metadata):
-        scan_map = self.storage.get_map()
-        if np.sum(image) != 0:
-            # check if we've already picked up this event
-            map_diff = np.sum(np.abs(np.int8(image) - np.int8(scan_map)))
-            if map_diff > np.size(image) * 0.1:
-                print('DIFFERENT MAPS')
-                for i in range(1,4):
-                    event = MDAEvent(channel={"config":"mCherry (550nm)", "exposure": 10.}, 
-                                    index={"t": -i, "c": 2}, 
-                                    min_start_time=0,
-                                    metadata={
-                                        CustomKeyes.GALVO: {
-                                            GalvoParams.SCAN_MASK: image,
-                                            #GalvoParams.PIXEL_SIZE : 0.1,
-                                            GalvoParams.STRATEGY: ScanningStragies.SNAKE,
-                                            #GalvoParams.DURATION : 1,
-                                            #GalvoParams.TRIGGERED : True,
-                                            #GalvoParams.TIMEOUT : 2
-                                        }})
-                    self.queue_manager.register_event(event)
-                scan_map = image
-            else:
-                print('SAME MAPS')
-            self.storage.save_map(scan_map)

@@ -11,9 +11,13 @@ def test_mda():
     from pymmcore_plus import CMMCorePlus
     from useq import MDASequence
 
-    from pymmcore_eda.actuator import MDAActuator
+    from pymmcore_eda.actuator import MDAActuator, ButtonActuator
     from pymmcore_eda.queue_manager import QueueManager
     from pymmcore_eda.writer import AdaptiveWriter
+    from pymmcore_eda.event_hub import EventHub
+    from pymmcore_eda.analyser import Analyser
+    from pymmcore_eda.interpreter import Interpreter
+    from useq import Channel
 
     mmc = CMMCorePlus()
     mmc.setDeviceAdapterSearchPaths(
@@ -25,23 +29,39 @@ def test_mda():
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False
 
-    queue_manager = QueueManager()
+    mmc.setProperty("Camera", "OnCameraCCDXSize", 2048)
+    mmc.setProperty("Camera", "OnCameraCCDYSize", 2048)
 
     mda_sequence = MDASequence(
         channels=["DAPI"],
         time_plan={"interval": 0.1, "loops": 3},
     )
-    base_actuator = MDAActuator(queue_manager, mda_sequence)
-    base_actuator.wait = False
-    
+   
     loc = Path(__file__).parent / "test_data/test.ome.zarr"
     writer = AdaptiveWriter(path=loc, delete_existing=True)
+    writer.reshape_on_finished = False
 
-    mmc.run_mda(queue_manager.q_iterator, output=writer)
+    hub = EventHub(mmc.mda, writer)
+    queue_manager = QueueManager()
+    analyser = Analyser(hub)
+    interpreter = Interpreter(hub)
+
+    mda_sequence = MDASequence(
+        channels=(Channel(config="DAPI",exposure=100),),
+        time_plan={"interval": 1, "loops": 5},
+    )
+    mmc.mda._reset_event_timer()
+    queue_manager.time_machine._t0 = time.perf_counter()
+
+    base_actuator = MDAActuator(queue_manager, mda_sequence)
     base_actuator.thread.start()
+    smart_actuator = ButtonActuator(queue_manager)
+    mmc.run_mda(queue_manager.q_iterator, output=writer)
+    base_actuator.thread.join()
     time.sleep(1)
     queue_manager.stop_seq()
-    time.sleep(1)
+
+
     zarr_store = ts.open({
         "driver": "zarr",
         "kvstore": {
@@ -52,7 +72,8 @@ def test_mda():
 
     # Access data
     data = zarr_store.read().result()
-    assert data.shape == (3, 1, 512, 512)
+    print(data.shape)
+    assert data.shape == (300, 512, 512)
 
     shutil.rmtree(loc)
     print('removed', loc)

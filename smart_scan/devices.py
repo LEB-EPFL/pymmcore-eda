@@ -13,7 +13,7 @@ import time
 logger = loggingHelper.createLogger(loggerName=__name__)
 
 
-class Device(ABC):
+class Scanner(ABC):
     """This is the superclass for all the hardware devices to be connected with the software."""
 
     ID: int  # how to impose properties to subclass
@@ -30,8 +30,35 @@ class Device(ABC):
     def isConnected(self):
         """Returns the connection status"""
 
+    @abstractmethod
+    def scan(self):
+        """Performs a scan"""
+    
 
-class Galvo_Scanners(Device):
+class GalvoScannersException(Exception):
+    """Base class for exceptions in this module."""
+
+
+class DummyScanners(Scanner):
+    """This is the class for the dummy scanners used to perform (smart) scans."""
+
+    def __init__(self) -> None:
+        pass
+    
+    def connect(self):
+        """Connects the dummy mirror system."""
+
+    def disconnect(self):
+        """Disconnects the dummy mirror system."""
+
+    def isConnected(self) -> bool:
+        """Returns the connection status of the dummy mirror system."""
+        return True
+
+    def scan(self, mask, pixelsize, scan_strategy, duration, triggered, timeout) -> bool:
+        """Perform a dummy scan."""
+
+class Galvo_Scanners(Scanner):
     """This is the class for the galvanometric mirrors used to perform (smart) scans."""
 
     def __init__(self) -> None:
@@ -64,10 +91,14 @@ class Galvo_Scanners(Device):
                 )
                 self._isConnected = True
 
-            except RuntimeError:
-                print("connection error")
+            except RuntimeError as e:
+                raise GalvoScannersException("Could not connect Analog Discovery") from e
                 loggingHelper.displayMessage(logStrings.GALVO_1)
                 logger.error(logStrings.GALVO_1)
+
+            except Exception as e:
+                raise GalvoScannersException("Could not load dll. Do you have the Analog Discovery SDK installed?") from e
+            
 
     def disconnect(self):
         """Disconnects the galvo mirror system."""
@@ -128,8 +159,8 @@ class Galvo_Scanners(Device):
             n_samples = len(voltages_x)
             rate = n_samples/duration # Hz
 
-            print(f'duration: {duration}')
-            print(f'rate: {rate}')
+            # print(f'duration: {duration}')
+            # print(f'rate: {rate}')
 
             if rate < self._maxRate:
                 # Ouputs the voltages
@@ -169,18 +200,18 @@ class Galvo_Scanners(Device):
         """Normalises and prepare the voltage to be later ouputted."""
         voltage_f = voltage.astype(np.float64)
         if np.dtype(voltage[0]) == np.int8 or np.dtype(voltage[0]) == np.uint8:
-            print("Scaling: UINT8")
+            # print("Scaling: UINT8")
             voltage_f /= 128.0
             voltage_f -= 1.0
         elif np.dtype(voltage[0]) == np.int16:
-            print("Scaling: INT16")
+            # print("Scaling: INT16")
             voltage_f /= 32768.0
         elif np.dtype(voltage[0]) == np.uint16:
-            print("Scaling: UINT16")
+            # print("Scaling: UINT16")
             voltage_f /= 16384.0
             voltage_f -= 1.0
         elif np.dtype(voltage[0]) == np.int32:
-            print("Scaling: INT32")
+            # print("Scaling: INT32")
             voltage_f /= 2147483648.0
         
         return (ctypes.c_double * len(voltage_f))(*voltage_f)
@@ -232,11 +263,6 @@ class Galvo_Scanners(Device):
         dwf.FDwfAnalogOutNodeAmplitudeSet(hdwf, channel_y, 0, c_double(2.5))
         dwf.FDwfAnalogOutOffsetSet(hdwf, channel_y, c_double(2.5)) # output between 0 and 5 V
         dwf.FDwfAnalogOutTriggerSourceSet(hdwf, channel_y, c_byte(tr))  # 0: No trigger, 11: ExternalTrigger1
-
-
-        # # Set DIO voltage reference (3.3V or 5V, depending on your needs)
-        # high_voltage = 5  # Replace with 5.0 if using 5V logic
-        # dwf.FDwfAnalogIOChannelNodeSet(hdwf, c_int(0), c_int(0), c_double(high_voltage))
 
         # Enable the Analog I/O subsystem
         dwf.FDwfAnalogIOEnableSet(hdwf, c_int(1))
@@ -369,8 +395,8 @@ class Galvo_Scanners(Device):
         # dwf.FDwfDigitalOutConfigure(hdwf, c_int(0))  # Turn off digital output
 
         # Final summary
-        print(f"Final Play Position: iPlay_x={iPlay_x}, iPlay_y={iPlay_y}")
-        print(f"Data Size: data_x.size={data_x.size}, data_y.size={data_y.size}")
+        # print(f"Final Play Position: iPlay_x={iPlay_x}, iPlay_y={iPlay_y}")
+        # print(f"Data Size: data_x.size={data_x.size}, data_y.size={data_y.size}")
 
 
     # def _ouput_voltages_trg(self, voltage_x, voltage_y, n_voltage_x, n_voltage_y, rate):
@@ -396,33 +422,7 @@ class Galvo_Scanners(Device):
     #     dwf.FDwfAnalogOutTriggerSourceSet(hdwf, channel_x, c_byte(11))  # ExternalTrigger1
 
     #     # Configure Channel Y
-    #     dwf.FDwfAnalogOutNodeEnableSet(hdwf, channel_y, 0, c_int(1))
-    #     dwf.FDwfAnalogOutNodeFunctionSet(hdwf, channel_y, 0, c_int(31))  # funcPlay
-    #     dwf.FDwfAnalogOutRepeatSet(hdwf, channel_y, c_int(1))
-    #     dwf.FDwfAnalogOutOffsetSet(hdwf, channel_y, c_double(2.5))
-    #     dwf.FDwfAnalogOutRunSet(hdwf, channel_y, c_double(sRun))
-    #     dwf.FDwfAnalogOutNodeFrequencySet(hdwf, channel_y, 0, c_double(rate))
-    #     dwf.FDwfAnalogOutNodeAmplitudeSet(hdwf, channel_y, 0, c_double(2.5))
-    #     dwf.FDwfAnalogOutTriggerSourceSet(hdwf, channel_y, c_byte(11))  # ExternalTrigger1
-
-    #     # Buffer Configuration
-    #     cBuffer_x = c_int(0)
-    #     cBuffer_y = c_int(0)
-
-    #     dwf.FDwfAnalogOutNodeDataInfo(hdwf, channel_x, 0, 0, byref(cBuffer_x))
-    #     dwf.FDwfAnalogOutNodeDataInfo(hdwf, channel_y, 0, 0, byref(cBuffer_y))
-
-    #     cBuffer_x.value = min(cBuffer_x.value, voltage_x.size)
-    #     cBuffer_y.value = min(cBuffer_y.value, voltage_y.size)
-
-    #     dwf.FDwfAnalogOutNodeDataSet(hdwf, channel_x, 0, n_voltage_x, cBuffer_x)
-    #     dwf.FDwfAnalogOutNodeDataSet(hdwf, channel_y, 0, n_voltage_y, cBuffer_y)
-
-    #     # Enable Channels (waiting for trigger)
-    #     dwf.FDwfAnalogOutConfigure(hdwf, channel_x, c_int(1))
-    #     dwf.FDwfAnalogOutConfigure(hdwf, channel_y, c_int(1))
-
-    #     print("Waiting for trigger...")
+    #     dwf.FDwfAnalogOutNodeEnableSet(hdwf, chan
 
     def _connect(self) -> tuple:
         """Connects the galvo mirror system, and return objects needed for the scan"""

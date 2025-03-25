@@ -4,6 +4,9 @@ import useq
 
 import shutil
 import os
+import json
+
+from smart_scan.custom_engine import CustomKeyes, GalvoParams
 
 from typing import TYPE_CHECKING
 
@@ -55,6 +58,22 @@ class AdaptiveWriter(TensorStoreHandler):
             chunk_layout=self._ts.ChunkLayout(chunk_shape=chunks),
             domain=self._ts.IndexDomain(labels=labels),
         )
+    
+    def frameReady(
+            self, frame: np.ndarray, event: useq.MDAEvent, meta: FrameMetaV1
+        ) -> None:
+        if event.index.get("c", 0) == 1:
+            
+            # convert metadata to json for writing, only if event is smart scan 
+            try:
+                new_metadata = event.metadata.copy()
+                new_metadata['0'][0] = json.dumps({'0': event.metadata['0'][0].tolist()})
+                event = event.replace(metadata = new_metadata)
+                meta['mda_event'] = meta['mda_event'].replace(metadata = {})
+            except:
+                pass
+
+        super().frameReady(frame, event, meta)
 
     def get_shape_chunks_labels(self, frame_shape, seq):
         if not self._nd_storage:
