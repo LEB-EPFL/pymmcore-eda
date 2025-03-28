@@ -9,6 +9,8 @@ import numpy as np
 
 from pymmcore_eda._logger import logger
 
+from pymmcore_eda._logger import logger
+
 
 if TYPE_CHECKING:
     from event_hub import EventHub

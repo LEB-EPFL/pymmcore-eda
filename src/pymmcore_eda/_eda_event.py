@@ -24,6 +24,7 @@ except ImportError:
 if TYPE_CHECKING:
     from collections.abc import Sequence
     from useq import MDAEvent
+    from useq import MDAEvent
 
     ReprArgs = Sequence[tuple[Optional[str], Any]]
 

@@ -149,6 +149,7 @@ class DynamicEventQueue:
             return self._unique_indexes['c']
         elif dim in self._unique_indexes:
             return list(self._unique_indexes[dim])
+            
         return []
     
     def get_events_at_time(self, timestamp):
