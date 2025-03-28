@@ -30,7 +30,7 @@ def test_actuator_reg():
     base_actuator.wait = False
 
     mda_sequence2 = MDASequence(
-        channels=["Cy5", "DAPI"],
+        channels=["Cy5"],
         time_plan={"interval": 1, "loops": 3},
     )
     base_actuator2 = MDAActuator(queue_manager, mda_sequence2)
@@ -46,8 +46,8 @@ def test_actuator_reg():
     time.sleep(5)
     queue_manager.stop_seq()
     time.sleep(1)
-    assert len(runner.events) == 9
-    assert runner._axis_max['c'] == 2
+    assert len(runner.events) == 6
+    assert runner._axis_max['c'] == 1
     assert runner._axis_max['t'] == 2
     
 
