@@ -4,7 +4,7 @@ import queue
 from useq import Channel
 from pymmcore_eda._eda_event import EDAEvent  # Replace with actual import path
 
-from useq import MDASequence
+from pymmcore_eda._eda_sequence import EDASequence
 
 
 class TestEDAEventSorting:
@@ -17,7 +17,7 @@ class TestEDAEventSorting:
             z_pos=0.0,
             pos_index=1,
             min_start_time=0.0,
-            sequence=MDASequence(axis_order="tpgcz")
+            sequence=EDASequence(axis_order="tpgcz")
         )
         
         assert event.channel.config == "DAPI"
@@ -40,7 +40,7 @@ class TestEDAEventSorting:
     
     def test_time_first_ordering(self):
         """Test sorting with 'tpgcz' axis order (time prioritized)."""
-        sequence = MDASequence(axis_order="tpgcz")
+        sequence = EDASequence(axis_order="tpgcz")
         
         events = [
             EDAEvent(
@@ -79,7 +79,7 @@ class TestEDAEventSorting:
     
     def test_channel_first_ordering(self):
         """Test sorting with 'ctpgz' axis order (channel prioritized)."""
-        sequence = MDASequence(axis_order="ctpgz", channels=[Channel(config="FITC"), Channel(config="DAPI")])
+        sequence = EDASequence(axis_order="ctpgz", channels=[Channel(config="FITC"), Channel(config="DAPI")])
         
         events = [
             EDAEvent(
@@ -118,7 +118,7 @@ class TestEDAEventSorting:
     
     def test_priority_queue(self):
         """Test that EDAEvents can be properly ordered in a PriorityQueue."""
-        sequence = MDASequence(axis_order="tpgcz")
+        sequence = EDASequence(axis_order="tpgcz")
         
         # Create a priority queue
         event_queue = queue.PriorityQueue()
@@ -160,7 +160,7 @@ class TestEDAEventSorting:
     
     def test_late_arriving_events(self):
         """Test that late-arriving events with earlier time get appropriate priority."""
-        sequence = MDASequence(axis_order="tpgcz")
+        sequence = EDASequence(axis_order="tpgcz")
         
         # Create a priority queue
         event_queue = queue.PriorityQueue()
@@ -205,7 +205,7 @@ class TestEDAEventSorting:
     
     def test_position_ordering(self):
         """Test that position indices are correctly ordered."""
-        sequence = MDASequence(axis_order="ptgcz")  # Position first
+        sequence = EDASequence(axis_order="ptgcz")  # Position first
         
         events = [
             EDAEvent(
@@ -241,7 +241,7 @@ class TestEDAEventSorting:
     
     def test_z_ordering(self):
         """Test that z positions are correctly ordered."""
-        sequence = MDASequence(axis_order="ztpgc")  # Z first
+        sequence = EDASequence(axis_order="ztpgc")  # Z first
         
         events = [
             EDAEvent(
@@ -277,7 +277,7 @@ class TestEDAEventSorting:
     
     def test_group_ordering(self):
         """Test that position groups (names) are correctly ordered."""
-        sequence = MDASequence(axis_order="gtpcz")  # Group first
+        sequence = EDASequence(axis_order="gtpcz")  # Group first
         
         events = [
             EDAEvent(
@@ -316,7 +316,7 @@ class TestEDAEventSorting:
     
     def test_none_values(self):
         """Test that None values are correctly handled (None is less than any value)."""
-        sequence = MDASequence(axis_order="tpgcz")
+        sequence = EDASequence(axis_order="tpgcz")
         
         events = [
             EDAEvent(
@@ -349,7 +349,7 @@ class TestEDAEventSorting:
             pos_index=2,
             pos_name="Field1",
             min_start_time=3.0,
-            sequence=MDASequence(axis_order="tpgcz")
+            sequence=EDASequence(axis_order="tpgcz")
         )
         
         # Default axis order from sequence (tpgcz)
@@ -370,7 +370,7 @@ class TestEDAEventSorting:
     
     def test_equality(self):
         """Test that equality comparison works correctly."""
-        sequence = MDASequence(axis_order="tpgcz")
+        sequence = EDASequence(axis_order="tpgcz")
         
         event1 = EDAEvent(
             channel=Channel(config="DAPI"),

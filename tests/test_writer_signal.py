@@ -15,8 +15,8 @@ def test_mda():
     from pymmcore_eda.queue_manager import QueueManager
     from pymmcore_eda.writer import AdaptiveWriter
     from pymmcore_eda.event_hub import EventHub
-    from pymmcore_eda.analyser import Analyser
-    from pymmcore_eda.interpreter import Interpreter
+    from pymmcore_eda.analyser import Dummy_Analyser
+    from pymmcore_eda.interpreter import Interpreter_widefield
     from useq import Channel
 
     mmc = CMMCorePlus()
@@ -43,8 +43,7 @@ def test_mda():
 
     hub = EventHub(mmc.mda, writer)
     queue_manager = QueueManager()
-    analyser = Analyser(hub)
-    interpreter = Interpreter(hub)
+
 
     mda_sequence = MDASequence(
         channels=(Channel(config="DAPI",exposure=100),),
@@ -58,9 +57,9 @@ def test_mda():
     smart_actuator = ButtonActuator(queue_manager)
     mmc.run_mda(queue_manager.q_iterator, output=writer)
     base_actuator.thread.join()
-    time.sleep(1)
+    time.sleep(5)
     queue_manager.stop_seq()
-
+    time.sleep(5)
 
     zarr_store = ts.open({
         "driver": "zarr",

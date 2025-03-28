@@ -45,6 +45,7 @@ def test_actuator_reg():
     runner.run(queue_manager.q_iterator)
     time.sleep(5)
     queue_manager.stop_seq()
+    time.sleep(1)
     assert len(runner.events) == 9
     assert runner._axis_max['c'] == 2
     assert runner._axis_max['t'] == 2
