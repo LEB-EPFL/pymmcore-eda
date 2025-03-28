@@ -33,7 +33,7 @@ def test_mda():
 
     runner.run(queue_manager.q_iterator)
     base_actuator.thread.start()
-    time.sleep(1)
+    time.sleep(3)
     queue_manager.stop_seq()
     assert len(runner.events) == 3
     print(runner.events)

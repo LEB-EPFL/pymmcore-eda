@@ -13,7 +13,7 @@ from pydantic import Field, field_validator
 
 from useq._actions import AcquireImage, AnyAction
 from useq._base_model import MutableModel
-from useq import Channel, PropertyTuple, SLMImage
+from useq import Channel, PropertyTuple, SLMImage, MDAEvent, MDASequence
 from pymmcore_eda._eda_sequence import EDASequence
 
 try:
@@ -23,6 +23,7 @@ except ImportError:
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from useq import MDAEvent
 
     ReprArgs = Sequence[tuple[Optional[str], Any]]
 
@@ -33,7 +34,7 @@ class EDAEvent(MutableModel):
     """Define a single event in a [`EDASequence`][EDASequence]. A subset of properties of a 
     useq.MDAEvent that are present before the scheduling.
     """
-
+    index: Optional[Dict[str, int]] = None
     attach_index: Optional[Dict[str, int]] = None
     channel: Optional[Channel] = None
     exposure: Optional[float] = Field(default=None, gt=0.0)
@@ -44,7 +45,7 @@ class EDAEvent(MutableModel):
     z_pos: Optional[float] = None
     pos_index: Optional[int] = None  # Position index for ordering
     slm_image: Optional[SLMImage] = None
-    sequence: Optional["EDASequence"] = Field(default=None, repr=False)
+    sequence: Optional[Union["EDASequence","MDASequence"]] = Field(default=None, repr=False)
     properties: Optional[list[PropertyTuple]] = None
     metadata: dict[str, Any] = Field(default_factory=dict)
     action: AnyAction = Field(default_factory=AcquireImage, discriminator="type")
@@ -81,7 +82,6 @@ class EDAEvent(MutableModel):
             if self.channel and self.sequence and hasattr(self.sequence, 'channels'):
                 # Find the index of this channel in the sequence channels
                 channel_config = self.channel.config
-                print('have seq', self.sequence.channels, channel_config)
                 for i, ch in enumerate(self.sequence.channels):
                     if isinstance(ch, Channel):
                         if ch.config == channel_config:
@@ -140,8 +140,6 @@ class EDAEvent(MutableModel):
                 
             # If values differ, return the comparison result
             if self_val != other_val:
-                print('SELF', self_val)
-                print(other_val)
                 # For string comparison (like position group names)
                 if isinstance(self_val, str) and isinstance(other_val, str) and dim != 'c':
                     return self_val < other_val
@@ -232,3 +230,15 @@ class EDAEvent(MutableModel):
             else:
                 result.append(val)
         return tuple(result)
+    
+    def from_mda_event(self, mda_event: MDAEvent):
+        """Create an EDAEvent from a useq.MDAEvent instance."""
+        # Copy all attributes from the MDAEvent
+        for key, value in mda_event.model_dump().items():
+            if key == 'index':
+                continue
+            if key == 'sequence' and value:
+                setattr(self, key, MDASequence(**value))
+            else:
+                setattr(self, key, value)
+        return self
