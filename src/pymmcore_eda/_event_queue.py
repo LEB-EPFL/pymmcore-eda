@@ -184,10 +184,10 @@ class DynamicEventQueue:
             return self._channels
         elif dim in ("t", "z", "p", "g"):
             return list(self._unique_indexes[dim])
-        else:
-            return []
-
-    def get_events_at_time(self, timestamp: float) -> list[EDAEvent]:
+            
+        return []
+    
+    def get_events_at_time(self, timestamp):
         """Get all events scheduled at a specific timestamp."""
         return self._events_by_time.get(timestamp, [])
 

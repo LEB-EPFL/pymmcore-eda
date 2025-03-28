@@ -40,27 +40,6 @@ class CropLimits:
 
 
 class AnalyserSettings:
-<<<<<<< HEAD
-    """Settings for the Analyser."""
-
-    model_path: str = (
-        "//sb-nas1.rcp.epfl.ch/LEB/Scientific_projects/deep_events_WS/data"
-        "original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
-    )
-    # model_path: str = ("/Volumes/LEB/Scientific_projects/deep_events_WS/data/",
-    # "original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/",
-    # "20240224_0208_model.h5")
-    n_frames_model = 4
-    n_fake_predictions = (
-        3  # number of initial fake predictions. The first ones are always longer
-    )
-    tile_size = 256  # used for tile-wise normalisation.
-    crop_size = (
-        512  # crop the images before feeding the model. Used to haste inference.
-    )
-    image_shape = (2048, 2048)
-
-=======
     
     n_frames_model: int = 4
     n_fake_predictions: int = 3      # number of initial fake predictions. The first ones are always longer
@@ -68,7 +47,6 @@ class AnalyserSettings:
     crop_size: int = 512 # crop the images before feeding the model. Used to haste inference. 
     image_shape: tuple = (2048,2048)
     
->>>>>>> b880f23 (Deleted references to smart_scan, and viewer.)
     # Calculated properties
     crop_limits = CropLimits(image_shape, crop_size)
 
@@ -135,25 +113,15 @@ class Dummy_Analyser:
 class Analyser:
     """Analyse the image and produce an event score map for the interpreter."""
 
-<<<<<<< HEAD
-    def __init__(self, hub: EventHub):
-        # Import tensorflow here, so that we don't need to do it when
-        # using DummyAnalyser
-=======
     def __init__(self, hub: EventHub, model_path : str = None):
         
         # Import tensorflow here, so that we don't need to do it when using DummyAnalyser
->>>>>>> b880f23 (Deleted references to smart_scan, and viewer.)
         from tensorflow import keras
 
         settings = AnalyserSettings()
 
         self.hub = hub
-<<<<<<< HEAD
-        self.model = keras.models.load_model(settings.model_path, compile=False)
-=======
         self.model = keras.models.load_model(model_path, compile = False)
->>>>>>> b880f23 (Deleted references to smart_scan, and viewer.)
         self.n_frames_model = settings.n_frames_model
         self.predict_thread: None | Thread = None
         self.output = np.zeros(settings.image_shape)
@@ -165,16 +133,8 @@ class Analyser:
 
         # connect the frameReady signal to the analyse method
         self.hub.frameReady.connect(self._analyse)
-<<<<<<< HEAD
-
-        self.images = np.zeros((self.n_frames_model + 1, *settings.image_shape))
-        # self.dummy_data = imread(Path("C:/Users/glinka/Desktop
-        # stk_0010_FOV_1_MMStack_Default.ome.tif"))
-        # img = self.dummy_data[0:3]
-=======
         
         self.images = np.zeros((self.n_frames_model+1, *settings.image_shape))
->>>>>>> b880f23 (Deleted references to smart_scan, and viewer.)
 
         # Perform a few first fake predictions - it takes a long time
         img = self.images
@@ -188,14 +148,9 @@ class Analyser:
         ]
         for _ in range(self.n_fake_predictions):
             self.model.predict(input_cropped)
-<<<<<<< HEAD
-
-    def _analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict) -> None:
-=======
         
     def _analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict):
         
->>>>>>> b880f23 (Deleted references to smart_scan, and viewer.)
         # Skip if not the first channel
         if event.index.get("c", 0) != 0:
             return
