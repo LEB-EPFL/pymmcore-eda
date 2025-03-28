@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from queue import Queue
+from queue import PriorityQueue
 from threading import Timer
 from typing import TYPE_CHECKING
 import numpy as np
@@ -20,7 +20,7 @@ class QueueManager:
     """
 
     def __init__(self, time_machine: TimeMachine | None = None):
-        self.q: Queue = Queue()
+        self.q: PriorityQueue = PriorityQueue()
         self.stop = object()
         self.q_iterator = iter(self.q.get, self.stop)
         self.time_machine = time_machine or TimeMachine()
