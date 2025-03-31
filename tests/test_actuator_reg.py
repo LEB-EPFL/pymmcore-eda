@@ -9,6 +9,7 @@ def test_actuator_reg():
 
     from pymmcore_eda.actuator import MDAActuator
     from pymmcore_eda.queue_manager import QueueManager
+    from pymmcore_eda._eda_sequence import EDASequence
 
     mmc = CMMCorePlus()
     mmc.setDeviceAdapterSearchPaths(
@@ -20,7 +21,9 @@ def test_actuator_reg():
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False
 
-    queue_manager = QueueManager()
+    eda_sequence = EDASequence(channels=("DAPI", "Cy5"))
+    queue_manager = QueueManager(eda_sequence=eda_sequence)
+
 
     mda_sequence = MDASequence(
         channels=["DAPI"],
@@ -40,7 +43,7 @@ def test_actuator_reg():
 
     base_actuator.thread.start()
     base_actuator2.thread.start()
-    time.sleep(0.5)
+    time.sleep(1)
     # mmc.run_mda(queue_manager.q_iterator)
     runner.run(queue_manager.q_iterator)
     time.sleep(5)

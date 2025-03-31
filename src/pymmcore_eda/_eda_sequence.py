@@ -5,6 +5,7 @@ from typing import (
     Dict,
     Any,
     Union,
+    Set
 )
 
 from pydantic import Field, field_validator
@@ -29,7 +30,7 @@ class EDASequence(MutableModel):
     
     # Configuration
     axis_order: Union[str, Tuple[str, ...]] = Field(default=('t', 'p', 'g', 'c', 'z'))
-    channels: Union[List[str], List[Channel]] = Field(default_factory=list)
+    channels: Union[Tuple[str, ...], Tuple[Channel, ...]] = Field(default_factory=list)
     channel_group: Optional[str] = None
     
     @field_validator("axis_order", mode="before")

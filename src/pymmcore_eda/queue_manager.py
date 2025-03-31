@@ -9,6 +9,7 @@ from pymmcore_eda.time_machine import TimeMachine
 from pymmcore_eda._event_queue import DynamicEventQueue
 from useq import MDAEvent
 from pymmcore_eda._eda_event import EDAEvent
+from pymmcore_eda._eda_sequence import EDASequence
 
 
 if TYPE_CHECKING:
@@ -22,7 +23,7 @@ class QueueManager:
     Closer description in structure.md.
     """
 
-    def __init__(self, time_machine: TimeMachine | None = None):
+    def __init__(self, time_machine: TimeMachine | None = None, eda_sequence: EDASequence | None = None):
         self.q: Queue = Queue()
         self.stop = object()
         self.q_iterator = iter(self.q.get, self.stop)
@@ -31,6 +32,7 @@ class QueueManager:
         self.t_idx = 0
         self.event_queue = DynamicEventQueue()
 
+        self.eda_sequence = eda_sequence
         self._axis_max: dict[str, int] = {}
         self.timer = Timer(0, self.queue_next_event)
         # self.axis_order = 'tpgcz' we might need this
@@ -44,7 +46,9 @@ class QueueManager:
         """Actuators call this to request an event to be put on the event_register."""
         print(f"Registering event {event}")
         if isinstance(event, MDAEvent):
-            event = EDAEvent().from_mda_event(event)
+            event = EDAEvent().from_mda_event(event, self.eda_sequence)
+        if self.eda_sequence and event.sequence is None:
+            event.eda_sequence = self.eda_sequence
 
         # Offset time
         if event.min_start_time < 0:

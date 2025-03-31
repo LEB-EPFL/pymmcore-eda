@@ -1,7 +1,7 @@
 from queue import PriorityQueue
 from sortedcontainers import SortedDict, SortedSet
 from collections import defaultdict
-
+from useq import Channel
 
 class DynamicEventQueue:
     """An event queue that tracks unique dimension values and allows indexing by ordinal position."""
@@ -13,7 +13,7 @@ class DynamicEventQueue:
         self._time_index = SortedDict()
         
         self._unique_indexes = {
-            'c': SortedSet(),  
+            'c': set(),  
             'z': SortedSet(),  
             'p': SortedSet(),  
             'g': SortedSet() 
@@ -21,9 +21,12 @@ class DynamicEventQueue:
         
         self._events_by_time = defaultdict(list)
         self._t_index = 0  # Sequential index counter
+        self.sequence = None
     
     def add(self, event):
         """Add an event to the queue, resolving any dimension indices in the event."""
+        if event.sequence and  not self.sequence:
+            self._apply_sequence(event.sequence)
         if event.attach_index:
             self._apply_dimension_indices(event)
         
@@ -34,6 +37,24 @@ class DynamicEventQueue:
         if event.min_start_time is not None:
             self._events_by_time[event.min_start_time].append(event)
     
+    def _apply_sequence(self, sequence):
+        """Apply the sequence to the event queue."""
+        self.sequence = sequence
+        
+        # Initialize unique indexes based on the sequence
+        if hasattr(sequence, 'channels'):
+            print('sequence channels', sequence.channels)
+            self._unique_indexes['c'] = set(c.config for c in sequence.channels)
+        
+        if hasattr(sequence, 'z_positions'):
+            self._unique_indexes['z'] = SortedSet(sequence.z_positions)
+        
+        if hasattr(sequence, 'positions'):
+            self._unique_indexes['p'] = SortedSet(sequence.positions)
+        
+        if hasattr(sequence, 'grid_positions'):
+            self._unique_indexes['g'] = SortedSet(sequence.grid_positions)
+
     def _apply_dimension_indices(self, event):
         """Apply dimensional indices from event.attach_index to set actual values."""
         if not event.attach_index:
@@ -45,7 +66,6 @@ class DynamicEventQueue:
                 if dim == 't':
                     event.min_start_time = value
                 elif dim == 'c':
-                    from useq import Channel
                     event.channel = Channel(config=value)
                 elif dim == 'z':
                     event.z_pos = value
@@ -64,6 +84,7 @@ class DynamicEventQueue:
                 self._time_index[timestamp] = 1
         
         if event.channel is not None:
+            print('index', self._unique_indexes)
             self._unique_indexes['c'].add(event.channel.config)
             
         if event.z_pos is not None:

@@ -231,14 +231,18 @@ class EDAEvent(MutableModel):
                 result.append(val)
         return tuple(result)
     
-    def from_mda_event(self, mda_event: MDAEvent):
+    def from_mda_event(self, mda_event: MDAEvent, eda_sequence: Optional[EDASequence] = None):
         """Create an EDAEvent from a useq.MDAEvent instance."""
         # Copy all attributes from the MDAEvent
         for key, value in mda_event.model_dump().items():
             if key == 'index':
                 continue
+            if key == 'sequence' and value and eda_sequence:
+                setattr(self, key, eda_sequence)
+                continue
             if key == 'sequence' and value:
                 setattr(self, key, MDASequence(**value))
-            else:
-                setattr(self, key, value)
+                continue
+            
+            setattr(self, key, value)
         return self
