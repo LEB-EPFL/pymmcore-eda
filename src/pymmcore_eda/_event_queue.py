@@ -7,12 +7,10 @@ class DynamicEventQueue:
     """An event queue that tracks unique dimension values and allows indexing by ordinal position."""
     
     def __init__(self):
-        self._events = PriorityQueue()
-        self._size = 0
-        
-        self._time_index = SortedDict()
+        self._events = SortedSet()
         
         self._unique_indexes = {
+            't': SortedSet(),
             'c': tuple(),  
             'z': SortedSet(),  
             'p': SortedSet(),  
@@ -25,14 +23,13 @@ class DynamicEventQueue:
     
     def add(self, event):
         """Add an event to the queue, resolving any dimension indices in the event."""
+        print("ADDING", event)
         if event.sequence and not self.sequence:
             self._apply_sequence(event.sequence)
         if event.attach_index:
             self._apply_dimension_indices(event)
         
-        self._events.put(event)
-        self._size += 1
-        print(event)
+        self._events.add(event)
         self._update_unique_sets(event)
         
         if event.min_start_time is not None:
@@ -73,45 +70,24 @@ class DynamicEventQueue:
     def _update_unique_sets(self, event):
         """Update the unique value sets with values from this event."""
         if event.min_start_time is not None:
-            timestamp = event.min_start_time
-            if timestamp in self._time_index:
-                self._time_index[timestamp] += 1
-            else:
-                self._time_index[timestamp] = 1
-        
+            self._unique_indexes['t'].add(event.min_start_time)
         if event.channel and not (event.channel.config in self._unique_indexes['c']):
             self._unique_indexes['c'] = self._unique_indexes['c'] + tuple([event.channel.config])
-            
         if event.z_pos is not None:
             self._unique_indexes['z'].add(event.z_pos)
-            
         if event.pos_index is not None:
             self._unique_indexes['p'].add(event.pos_index)
-            
         if event.pos_name is not None:
             self._unique_indexes['g'].add(event.pos_name)
     
     def get_next(self):
         """Get the next event from the queue (first in order)."""
-        if self._size == 0:
+        if len(self._events) == 0:
             return None
         
-        self._size -= 1
-        event = self._events.get()
-        
+        event = self._events.pop(0)
         # Generate and assign integer indexes before returning the event
-        self._assign_integer_indexes(event)
-        
-        if event.min_start_time is not None:
-            timestamp = event.min_start_time
-            self._time_index[timestamp] -= 1
-            
-            if self._time_index[timestamp] <= 0:
-                del self._time_index[timestamp]
-                self._t_index += 1
-                if timestamp in self._events_by_time:
-                    del self._events_by_time[timestamp]
-        
+        event = self._assign_integer_indexes(event)       
         return event
     
     def _assign_integer_indexes(self, event):
@@ -145,18 +121,13 @@ class DynamicEventQueue:
         
         # Assign time index if available
         if event.min_start_time is not None:
-            time_list = list(self._time_index.keys())
-            try:
-                time_index = time_list.index(event.min_start_time)
-                index['t'] = time_index
-            except ValueError:
-                pass  # Time not found in index
-        
-        # Assign sequential index
-        index['t'] = self._t_index
+            grid_index = self._get_index_of_value('t', event.min_start_time)
+            if grid_index is not None:
+                index['t'] = grid_index
         
         # Attach the index to the event
         event.index = index
+        return event
     
     def _get_index_of_value(self, dim, value):
         """Get the integer index of a value in a dimension's unique set."""
@@ -167,18 +138,13 @@ class DynamicEventQueue:
     
     def get_value_at_index(self, dim, index):
         """Get the value at a specific index for a dimension."""
-        if dim == 't':
-            if 0 <= index < len(self._time_index):
-                return list(self._time_index.keys())[index]
-        elif dim in self._unique_indexes:
+        if dim in self._unique_indexes:
             if 0 <= index < len(self._unique_indexes[dim]):
                 return list(self._unique_indexes[dim])[index]
         return None
     
     def get_unique_values(self, dim):
         """Get all unique values for a dimension."""
-        if dim == 't':
-            return list(self._time_index.keys())
         if dim == 'c':
             return self._unique_indexes['c']
         elif dim in self._unique_indexes:
@@ -193,11 +159,6 @@ class DynamicEventQueue:
         """Get the count of events at a specific timestamp."""
         return self._time_index.get(timestamp, 0)
     
-    def get_next_time(self):
-        if len(self._time_index) == 0:
-            return None
-        return self._time_index.keys()[0]
-
     def __len__(self):
-        """Return the number of events in the queue."""
-        return self._size
+        """Get the number of events in the queue."""
+        return len(self._events)

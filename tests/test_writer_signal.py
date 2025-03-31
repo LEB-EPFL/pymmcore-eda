@@ -48,7 +48,7 @@ def test_mda():
     base_actuator = MDAActuator(queue_manager, mda_sequence)
     base_actuator.thread.start()
     smart_actuator = ButtonActuator(queue_manager)
-    mmc.run_mda(queue_manager.q_iterator, output=writer)
+    mmc.run_mda(queue_manager.acq_queue_iterator, output=writer)
     base_actuator.thread.join()
     queue_manager.stop_seq()
     time.sleep(5)

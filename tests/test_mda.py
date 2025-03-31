@@ -31,9 +31,13 @@ def test_mda():
 
     runner = MockRunner()
 
-    runner.run(queue_manager.q_iterator)
+    runner.run(queue_manager.acq_queue_iterator)
     base_actuator.thread.start()
-    time.sleep(3)
+    base_actuator.thread.join()
+    time.sleep(5)
     queue_manager.stop_seq()
     assert len(runner.events) == 3
     print(runner.events)
+
+if __name__ == "__main__":
+    test_mda()

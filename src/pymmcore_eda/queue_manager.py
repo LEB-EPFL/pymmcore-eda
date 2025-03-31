@@ -24,13 +24,14 @@ class QueueManager:
     """
 
     def __init__(self, time_machine: TimeMachine | None = None, eda_sequence: EDASequence | None = None):
-        self.q: Queue = Queue()
+        self.acq_queue: Queue = Queue()
         self.stop = object()
-        self.q_iterator = iter(self.q.get, self.stop)
+        self.acq_queue_iterator = iter(self.acq_queue.get, self.stop)
         self.time_machine = time_machine or TimeMachine()
         self.preemptive = 0.02
         self.t_idx = 0
         self.warmup = 3
+        self.next_time = None
         self.event_queue = DynamicEventQueue()
 
         self.eda_sequence = eda_sequence
@@ -86,19 +87,22 @@ class QueueManager:
     def queue_next_event(self):
         """Queue the next event."""
         eda_event = self.event_queue.get_next()
+        if not eda_event:
+            self.stop_seq()
+            return
         event = MDAEvent(**eda_event.model_dump())
-        self.q.put(event)
+        self.acq_queue.put(event)
         self._reset_timer()
 
     def stop_seq(self):
         """Stop the sequence after the events currently on the queue."""
-        self.q.put(self.stop)
+        self.acq_queue.put(self.stop)
 
     def empty_queue(self):
         """Empty the queue."""
         i = 0
-        while not self.q.empty():
-            self.q.get(False)
+        while not self.acq_queue.empty():
+            self.acq_queue.get(False)
             i+=1
         print(f"Emptied the queue of {i} events.")
 
@@ -106,7 +110,7 @@ class QueueManager:
         """Set or reset the timer for an event."""
         #If we are the time 0 event and we reset, wait for potential other events to be queued
         self.timer.cancel()
-        start_time = self.event_queue.get_next_time()
+        start_time = self.event_queue._events[0].min_start_time if len(self.event_queue._events) > 0 else None
         if start_time is None:
             return
         relative_time =  start_time - self.time_machine.event_seconds_elapsed() - self.preemptive

@@ -191,6 +191,27 @@ class EDAEvent(MutableModel):
             self.reset_event_timer == other.reset_event_timer
         )
     
+    def __hash__(self) -> int:
+        # Create a hashable representation of the event based on the same fields used in __eq__
+        hashable_parts = []
+        axis_order = self._get_axis_order()
+        for dim in axis_order:
+            val = self._get_dimension_value(dim)
+            hashable_parts.append(val)
+            
+        hashable_parts.extend([
+            self.min_start_time,
+            self.exposure,
+            # Convert list to tuple since lists aren't hashable
+            tuple(self.properties) if self.properties else None,
+            # You might need a custom hash for action depending on its type
+            hash(self.action) if hasattr(self.action, '__hash__') else id(self.action),
+            self.keep_shutter_open,
+            self.reset_event_timer
+        ])
+        
+        return hash(tuple(hashable_parts))
+
     def get_priority_key(self, axis_order: Union[tuple[str, ...], str] = None) -> Tuple:
         """
         Create a tuple of values for sorting based on axis order.

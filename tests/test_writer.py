@@ -36,7 +36,7 @@ def test_mda():
     loc = Path(__file__).parent / "test_data/test.ome.zarr"
     writer = AdaptiveWriter(path=loc, delete_existing=True)
 
-    mmc.run_mda(queue_manager.q_iterator, output=writer)
+    mmc.run_mda(queue_manager.acq_queue_iterator, output=writer)
     base_actuator.thread.start()
     base_actuator.thread.join()
     queue_manager.stop_seq()

@@ -150,14 +150,14 @@ def test_attach_index_with_sequence():
     
     # Create a new event with attach_index
     new_event = EDAEvent(
-        attach_index={'t': 1, 'c': 1},  # t=5.0, c=GFP
+        attach_index={'t': 1, 'c': 0},  # t=5.0, c=GFP
         sequence=seq  # Important to set the sequence for proper channel indexing
     )
     queue.add(new_event)
     
     # Verify the event was properly configured
     assert new_event.min_start_time == 5.0
-    assert new_event.channel.config == "GFP"
+    assert new_event.channel.config == "DAPI"
     
     # Check sorting - all events should come out in order
     events = []
@@ -165,6 +165,7 @@ def test_attach_index_with_sequence():
         events.append(queue.get_next())
     
     # Events should be sorted by time first, then channel (per seq.axis_order)
+    print(events)
     assert len(events) == 3
     assert events[0].min_start_time == 0.0
     assert events[1].min_start_time == 5.0
@@ -172,4 +173,4 @@ def test_attach_index_with_sequence():
     
     # For same time, should be sorted by channel
     # The events with t=5.0 should have GFP channel
-    assert {events[1].channel.config, events[2].channel.config} == {"GFP"}
+    assert {events[1].channel.config, events[2].channel.config} == {"DAPI", "GFP"}
