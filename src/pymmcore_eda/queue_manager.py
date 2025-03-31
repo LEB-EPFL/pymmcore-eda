@@ -30,6 +30,7 @@ class QueueManager:
         self.time_machine = time_machine or TimeMachine()
         self.preemptive = 0.02
         self.t_idx = 0
+        self.warmup = 3
         self.event_queue = DynamicEventQueue()
 
         self.eda_sequence = eda_sequence
@@ -44,7 +45,6 @@ class QueueManager:
 
     def register_event(self, event: MDAEvent|EDAEvent):
         """Actuators call this to request an event to be put on the event_register."""
-        print(f"Registering event {event}")
         if isinstance(event, MDAEvent):
             event = EDAEvent().from_mda_event(event, self.eda_sequence)
         if self.eda_sequence and event.sequence is None:
@@ -56,6 +56,9 @@ class QueueManager:
                 event.min_start_time
             )
             event.min_start_time = start
+
+        # Add warmup time
+        event.min_start_time += self.warmup
 
         # if event.index.get("c", 0) != 0:
         #     if len(self.event_register) != 0:
@@ -76,7 +79,6 @@ class QueueManager:
         #                     pass
         
         self.event_queue.add(event)
-        print(f"Added event {event}")
         self._reset_timer()
         # for k, v in event.index.items():
         #     self._axis_max[k] = max(self._axis_max.get(k, 0), v)

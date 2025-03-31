@@ -13,7 +13,7 @@ class DynamicEventQueue:
         self._time_index = SortedDict()
         
         self._unique_indexes = {
-            'c': set(),  
+            'c': tuple(),  
             'z': SortedSet(),  
             'p': SortedSet(),  
             'g': SortedSet() 
@@ -25,13 +25,14 @@ class DynamicEventQueue:
     
     def add(self, event):
         """Add an event to the queue, resolving any dimension indices in the event."""
-        if event.sequence and  not self.sequence:
+        if event.sequence and not self.sequence:
             self._apply_sequence(event.sequence)
         if event.attach_index:
             self._apply_dimension_indices(event)
         
         self._events.put(event)
         self._size += 1
+        print(event)
         self._update_unique_sets(event)
         
         if event.min_start_time is not None:
@@ -40,18 +41,13 @@ class DynamicEventQueue:
     def _apply_sequence(self, sequence):
         """Apply the sequence to the event queue."""
         self.sequence = sequence
-        
         # Initialize unique indexes based on the sequence
         if hasattr(sequence, 'channels'):
-            print('sequence channels', sequence.channels)
-            self._unique_indexes['c'] = set(c.config for c in sequence.channels)
-        
+            self._unique_indexes['c'] = tuple(c.config for c in sequence.channels)
         if hasattr(sequence, 'z_positions'):
             self._unique_indexes['z'] = SortedSet(sequence.z_positions)
-        
         if hasattr(sequence, 'positions'):
             self._unique_indexes['p'] = SortedSet(sequence.positions)
-        
         if hasattr(sequence, 'grid_positions'):
             self._unique_indexes['g'] = SortedSet(sequence.grid_positions)
 
@@ -83,9 +79,8 @@ class DynamicEventQueue:
             else:
                 self._time_index[timestamp] = 1
         
-        if event.channel is not None:
-            print('index', self._unique_indexes)
-            self._unique_indexes['c'].add(event.channel.config)
+        if event.channel and not (event.channel.config in self._unique_indexes['c']):
+            self._unique_indexes['c'] = self._unique_indexes['c'] + tuple([event.channel.config])
             
         if event.z_pos is not None:
             self._unique_indexes['z'].add(event.z_pos)
@@ -159,7 +154,6 @@ class DynamicEventQueue:
         
         # Assign sequential index
         index['t'] = self._t_index
-
         
         # Attach the index to the event
         event.index = index
@@ -167,7 +161,7 @@ class DynamicEventQueue:
     def _get_index_of_value(self, dim, value):
         """Get the integer index of a value in a dimension's unique set."""
         if dim in self._unique_indexes and value in self._unique_indexes[dim]:
-            values_list = list(self._unique_indexes[dim])
+            values_list = self._unique_indexes[dim]
             return values_list.index(value)
         return None
     
@@ -179,16 +173,16 @@ class DynamicEventQueue:
         elif dim in self._unique_indexes:
             if 0 <= index < len(self._unique_indexes[dim]):
                 return list(self._unique_indexes[dim])[index]
-                
         return None
     
     def get_unique_values(self, dim):
         """Get all unique values for a dimension."""
         if dim == 't':
             return list(self._time_index.keys())
+        if dim == 'c':
+            return self._unique_indexes['c']
         elif dim in self._unique_indexes:
             return list(self._unique_indexes[dim])
-            
         return []
     
     def get_events_at_time(self, timestamp):

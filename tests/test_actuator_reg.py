@@ -41,8 +41,9 @@ def test_actuator_reg():
 
     runner = MockRunner()
 
-    base_actuator.thread.start()
     base_actuator2.thread.start()
+    time.sleep(1)
+    base_actuator.thread.start()
     time.sleep(1)
     # mmc.run_mda(queue_manager.q_iterator)
     runner.run(queue_manager.q_iterator)
@@ -51,6 +52,7 @@ def test_actuator_reg():
     time.sleep(1)
     assert len(runner.events) == 6
     assert runner._axis_max['c'] == 1
+    assert runner.events[0].channel.config == "DAPI"
     assert runner._axis_max['t'] == 2
     
 

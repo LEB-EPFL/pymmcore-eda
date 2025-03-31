@@ -123,6 +123,7 @@ class EDAEvent(MutableModel):
         # Get axis order from sequence or use the default ('t', 'p', 'g', 'c', 'z')
         axis_order = self._get_axis_order()
         
+
         # Compare based on each dimension in the axis order
         for dim in axis_order:
             self_val = self._get_dimension_value(dim)
@@ -147,9 +148,8 @@ class EDAEvent(MutableModel):
                 try:
                     return float(self_val) < float(other_val)
                 except ValueError:
+                    # One of the items could not be indexed, it will go later
                     if isinstance(self_val, str):
-                    # trying channel and channel index, we will go later. 
-                    # Added event does not have sequence set most likely
                         return False
                     elif isinstance(other_val, str):
                         return True

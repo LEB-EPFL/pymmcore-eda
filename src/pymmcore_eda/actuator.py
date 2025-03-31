@@ -36,7 +36,6 @@ class MDAActuator:
             # event = event.replace(index=new_index)
             if event.reset_event_timer:
                  event = event.replace(reset_event_timer=False)
-            print(f"Actuater registering event {event}")
             self.queue_manager.register_event(event)
         if self.wait:
             time.sleep(event.min_start_time + 3)

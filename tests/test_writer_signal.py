@@ -29,13 +29,8 @@ def test_mda():
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False
 
-    mmc.setProperty("Camera", "OnCameraCCDXSize", 2048)
-    mmc.setProperty("Camera", "OnCameraCCDYSize", 2048)
-
-    mda_sequence = MDASequence(
-        channels=["DAPI"],
-        time_plan={"interval": 0.1, "loops": 3},
-    )
+    mmc.setProperty("Camera", "OnCameraCCDXSize", 512)
+    mmc.setProperty("Camera", "OnCameraCCDYSize", 512)
    
     loc = Path(__file__).parent / "test_data/test.ome.zarr"
     writer = AdaptiveWriter(path=loc, delete_existing=True)
@@ -47,17 +42,14 @@ def test_mda():
 
     mda_sequence = MDASequence(
         channels=(Channel(config="DAPI",exposure=100),),
-        time_plan={"interval": 1, "loops": 5},
+        time_plan={"interval": 0.5, "loops": 5},
     )
-    mmc.mda._reset_event_timer()
-    queue_manager.time_machine._t0 = time.perf_counter()
 
     base_actuator = MDAActuator(queue_manager, mda_sequence)
     base_actuator.thread.start()
     smart_actuator = ButtonActuator(queue_manager)
     mmc.run_mda(queue_manager.q_iterator, output=writer)
     base_actuator.thread.join()
-    time.sleep(5)
     queue_manager.stop_seq()
     time.sleep(5)
 
@@ -72,7 +64,7 @@ def test_mda():
     # Access data
     data = zarr_store.read().result()
     print(data.shape)
-    assert data.shape == (300, 512, 512)
+    assert data.shape == (5, 512, 512)
 
     shutil.rmtree(loc)
     print('removed', loc)

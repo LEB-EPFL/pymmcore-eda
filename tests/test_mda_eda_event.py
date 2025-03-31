@@ -50,7 +50,7 @@ def test_from_mda_event_with_index():
     assert eda_event.exposure == 50.0
     
     # Ensure index field was not copied
-    assert not hasattr(eda_event, "index")
+    assert eda_event.index is None
     # And that it didn't overwrite attach_index
     assert eda_event.attach_index is None
 
