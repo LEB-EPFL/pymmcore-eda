@@ -49,17 +49,20 @@ class QueueManager:
         if isinstance(event, MDAEvent):
             event = EDAEvent().from_mda_event(event, self.eda_sequence)
         if self.eda_sequence and event.sequence is None:
-            event.eda_sequence = self.eda_sequence
+            event.sequence = self.eda_sequence
 
         # Offset time
-        if event.min_start_time < 0:
+        if event.min_start_time and event.min_start_time < 0.0:
             start = self.time_machine.event_seconds_elapsed() + abs(
                 event.min_start_time
             )
             event.min_start_time = start
 
         # Add warmup time
-        event.min_start_time += self.warmup
+        if event.min_start_time:
+            event.min_start_time += self.warmup
+        else:
+            event.min_start_time = self.warmup
 
         # if event.index.get("c", 0) != 0:
         #     if len(self.event_register) != 0:
@@ -94,6 +97,7 @@ class QueueManager:
         self.acq_queue.put(event)
         self._reset_timer()
 
+
     def stop_seq(self):
         """Stop the sequence after the events currently on the queue."""
         self.acq_queue.put(self.stop)
@@ -110,9 +114,10 @@ class QueueManager:
         """Set or reset the timer for an event."""
         #If we are the time 0 event and we reset, wait for potential other events to be queued
         self.timer.cancel()
-        start_time = self.event_queue._events[0].min_start_time if len(self.event_queue._events) > 0 else None
-        if start_time is None:
+        if len(self.event_queue._events) == 0:
             return
+        self.time_machine.consume_event(self.event_queue._events[0])
+        start_time = self.event_queue._events[0].min_start_time
         relative_time =  start_time - self.time_machine.event_seconds_elapsed() - self.preemptive
         self.timer = Timer(max(relative_time, 0.0), self.queue_next_event)
         self.timer.start()

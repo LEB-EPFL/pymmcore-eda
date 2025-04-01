@@ -23,12 +23,12 @@ class DynamicEventQueue:
     
     def add(self, event):
         """Add an event to the queue, resolving any dimension indices in the event."""
-        print("ADDING", event)
         if event.sequence and not self.sequence:
             self._apply_sequence(event.sequence)
         if event.attach_index:
             self._apply_dimension_indices(event)
         
+        print("ADDING", event)
         self._events.add(event)
         self._update_unique_sets(event)
         
@@ -57,6 +57,7 @@ class DynamicEventQueue:
             value = self.get_value_at_index(dim, index)
             if value is not None:
                 if dim == 't':
+                    print('Getting index from', index, self._unique_indexes['t'])
                     event.min_start_time = value
                 elif dim == 'c':
                     event.channel = Channel(config=value)
