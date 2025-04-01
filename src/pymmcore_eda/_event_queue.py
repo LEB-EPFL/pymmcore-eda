@@ -156,10 +156,6 @@ class DynamicEventQueue:
         """Get all events scheduled at a specific timestamp."""
         return self._events_by_time.get(timestamp, [])
     
-    def get_time_count(self, timestamp):
-        """Get the count of events at a specific timestamp."""
-        return self._time_index.get(timestamp, 0)
-    
     def __len__(self):
         """Get the number of events in the queue."""
         return len(self._events)

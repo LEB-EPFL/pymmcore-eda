@@ -64,23 +64,17 @@ class QueueManager:
         else:
             event.min_start_time = self.warmup
 
-        # if event.index.get("c", 0) != 0:
-        #     if len(self.event_register) != 0:
-        #         events = self.event_register[event.min_start_time]["events"].copy()
-        #         for i, event_i in enumerate(events):
-        #             if event_i.index.get('c',0) == event.index.get('c',0):
-        #                 del self.event_register[event.min_start_time]['events'][i]
-                        
-        #                 # if smart scan event, perfom logical or between masks masks:
-        #                 try:
-        #                     copied_map = event_i.metadata.get('0',0)[0]
-        #                     current_map = event.metadata.get('0',0)[0]
-        #                     new_map = np.logical_or(copied_map, current_map)
-        #                     new_metadata = event.metadata.copy()
-        #                     new_metadata['0'][0] = new_map
-        #                     event = event.replace(metadata=new_metadata)
-        #                 except:
-        #                     pass
+        # Handle frap maps
+        if event.metadata:
+            if event.metadata.get('0',0)[0] is not None:
+                events = self.event_queue.get_events_at_time(event.min_start_time)
+                for other_event in events:
+                    if other_event.metadata.get('0',0)[0] is not None:
+                        event.metadata['0'][0] = np.logical_or(
+                            event.metadata['0'][0], other_event.metadata['0'][0]
+                        )
+                        self.event_queue._events.remove(other_event)
+
         
         self.event_queue.add(event)
         self._reset_timer()
