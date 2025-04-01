@@ -1,7 +1,6 @@
 import time
 
 from pathlib import Path
-import shutil
 import sys
 sys.path.append(str(Path(__file__).parent.parent))
 from pymmcore_plus import CMMCorePlus

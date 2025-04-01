@@ -25,7 +25,8 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-    "pymmcore_plus >= 0.12"
+    "pymmcore-plus<0.13.6",
+    "sortedcontainers>=2.4.0",
 ]
 
 [project.optional-dependencies]
@@ -42,7 +43,7 @@ log_cli_level = "INFO"
 # https://beta.ruff.rs/docs/rules/
 [tool.ruff]
 line-length = 88
-target-version = "py39"
+target-version = "py312"
 
 [tool.ruff.lint]
 pydocstyle = { convention = "numpy" }

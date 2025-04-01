@@ -1,5 +1,4 @@
-from queue import PriorityQueue
-from sortedcontainers import SortedDict, SortedSet
+from sortedcontainers import  SortedSet
 from collections import defaultdict
 from useq import Channel
 

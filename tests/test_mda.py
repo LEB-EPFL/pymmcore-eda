@@ -14,6 +14,7 @@ def test_mda():
     mmc.setDeviceAdapterSearchPaths(
         [
             "C:/Program Files/Micro-Manager-2.0/",
+            "/opt/micro-manager",
             *list(mmc.getDeviceAdapterSearchPaths()),
         ]
     )
