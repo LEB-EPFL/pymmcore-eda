@@ -6,8 +6,8 @@ timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 unique_log_file = Path(os.path.expanduser(f"~\\AppData\\Local\\pymmcore-plus\\pymmcore-plus\\logs\\pymmcore-plus_{timestamp}.log"))
 #os.environ['PYMM_LOG_FILE'] = str(unique_log_file)
 
-os.environ['PYMM_LOG_FILE'] = str(unique_log_file)
-# os.environ['PYMM_LOG_FILE'] = str(Path("\\Users\\giorgio\\Desktop\\"))
+# os.environ['PYMM_LOG_FILE'] = str(unique_log_file)
+os.environ['PYMM_LOG_FILE'] = str(Path("\\Users\\giorgio\\Desktop\\"))
 
 from pymmcore_plus import CMMCorePlus
 
@@ -27,12 +27,18 @@ from smart_scan.custom_engine import CustomEngine
 from useq import Channel, MDASequence
 from pathlib import Path
 
+# import the viewer widget
+from PyQt5.QtCore import QThread
+import sys
+from PyQt5.QtWidgets import QApplication
+from pymmcore_widgets.views import ImagePreview
 
 # Select the use case
 use_dummy_galvo = True      # If True, dummy galvo scanners are used
-use_microscope = True      
+use_microscope = False      
 use_smart_scan = False      # If False, widefield is used
 n_smart_events = 10       # Number of smart events generated after event detection
+show_live_preview = True    # If True, the live preview is shown
 
 # Empty the pymmcore-plus queue at the end of the series of generated smart events. Can help achieve a target frame-rate, at the expense of skipped frames
 skip_frames = True   
@@ -41,7 +47,7 @@ skip_frames = True
 use_dummy_analysis = True   # If False, tensorflow is used to predict events
 
 # Dummy Analysis parameters
-prediction_time = 0.3
+prediction_time = 0.8
 
 # Interpreter parameters
 smart_event_period = 2      # enforce a smart event generation evert smart_event_period frames. 0 if not enforcing
@@ -54,6 +60,28 @@ mda_sequence = MDASequence(
 )
 
 ########################################
+
+# Define the acquisition thread
+class AcquisitionThread(QThread):
+    def __init__(self, mmc, queue_manager, writer, base_actuator):
+        super().__init__()
+        self.mmc = mmc
+        self.queue_manager = queue_manager
+        self.writer = writer
+        self.base_actuator = base_actuator
+
+    def run(self):
+        self.mmc.mda._reset_event_timer()
+        self.queue_manager.time_machine._t0 = time.perf_counter()
+
+        self.base_actuator.thread.start()
+        self.mmc.run_mda(self.queue_manager.q_iterator, output=self.writer)
+
+        self.base_actuator.thread.join()
+
+        time.sleep(1)
+        self.queue_manager.stop_seq()
+
 
 mmc = CMMCorePlus()
 mmc.setDeviceAdapterSearchPaths(
@@ -81,6 +109,7 @@ else:
     mmc.setProperty("Camera", "OnCameraCCDXSize", 2048)
     mmc.setProperty("Camera", "OnCameraCCDYSize", 2048)
 
+
 # Instanciate the galvo scanners - dummy or real
 galvo_scanners = DummyScanners() if use_dummy_galvo else Galvo_Scanners()
 mmc.mda.set_engine(CustomEngine(mmc,galvo_scanners))
@@ -105,14 +134,18 @@ else:
     interpreter = Interpreter_widefield(hub, smart_event_period = smart_event_period)
     smart_actuator = SmartActuator_widefield(queue_manager, hub, n_events=n_smart_events, skip_frames=skip_frames)
 
-# Start and manage the acquisition
-mmc.mda._reset_event_timer()
-queue_manager.time_machine._t0 = time.perf_counter()
+# Optionally show the live preview
+if show_live_preview:
+    # Create the QApplication
+    app = QApplication(sys.argv)
 
-base_actuator.thread.start()
-mmc.run_mda(queue_manager.q_iterator, output = writer)
+    # Add the viewer widget
+    viewer = ImagePreview(mmcore = mmc)
+    viewer.show()
 
-base_actuator.thread.join()
-time.sleep(1)
-queue_manager.stop_seq()
+# Start the acquisition in a separate thread
+acquisition_thread = AcquisitionThread(mmc, queue_manager, writer, base_actuator)
+acquisition_thread.start()
 
+# Start the event loop
+sys.exit(app.exec_())
