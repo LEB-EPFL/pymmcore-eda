@@ -36,9 +36,13 @@ Source = "https://github.com/LEB-EPFL/pymmcore-eda"
 Tracker = "https://github.com/LEB-EPFL/pymmcore-eda/issues"
 Documentation = "https://LEB-EPFL.github.io/pymmcore-eda"
 
+[tool.setuptools]
+packages = {find = {where = ["src"]}}
+
 [tool.pytest.ini_options]
 log_cli = true
 log_cli_level = "INFO"
+pythonpath = ["src"]
 
 # https://beta.ruff.rs/docs/rules/
 [tool.ruff]
