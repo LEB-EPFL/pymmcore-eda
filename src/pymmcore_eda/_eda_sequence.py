@@ -32,6 +32,7 @@ class EDASequence(MutableModel):
     axis_order: Union[str, Tuple[str, ...]] = Field(default=('t', 'p', 'g', 'c', 'z'))
     channels: Union[Tuple[str, ...], Tuple[Channel, ...]] = Field(default_factory=list)
     channel_group: Optional[str] = None
+    z_direction: str = "up"  # Direction of Z movement, either "up", "down" or "alternate"
     
     @field_validator("axis_order", mode="before")
     def _validate_axis_order(cls, val: Any) -> Tuple[str, ...]:

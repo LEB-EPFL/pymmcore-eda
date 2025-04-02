@@ -79,15 +79,9 @@ class EDAEvent(MutableModel):
             return self.min_start_time
         elif dim == 'c':
             # If we have a channel and a sequence, return the channel index in the sequence
-            if self.channel and self.sequence and hasattr(self.sequence, 'channels'):
-                # Find the index of this channel in the sequence channels
-                channel_config = self.channel.config
-                for i, ch in enumerate(self.sequence.channels):
-                    if isinstance(ch, Channel):
-                        if ch.config == channel_config:
-                            return i
-                    elif ch == channel_config:
-                        return i
+            index = self._get_channel_index()
+            if index is not False:
+                return index
             # Default to channel config for sorting if no sequence is available
             return self.channel.config if self.channel else None
         elif dim == 'z':
@@ -98,15 +92,21 @@ class EDAEvent(MutableModel):
             return self.pos_name
         else:
             return None
-    
+
+    def _get_channel_index(self):
+        if self.channel and self.sequence and hasattr(self.sequence, 'channels'):
+            # Find the index of this channel in the sequence channels
+            channel_config = self.channel.config
+            for i, ch in enumerate(self.sequence.channels):
+                if isinstance(ch, Channel):
+                    if ch.config == channel_config:
+                        return i
+                elif ch == channel_config:
+                    return i
+        return False
+
     def _get_axis_order(self) -> tuple[str, ...]:
-        """Get the axis order to use for comparisons.
-        
-        Returns
-        -------
-        tuple[str, ...]
-            The axis order tuple, defaulting to ('t', 'p', 'g', 'c', 'z') if not available from sequence
-        """
+        """Get the axis order to use for comparisons."""
         if self.sequence and hasattr(self.sequence, 'axis_order'):
             return self.sequence.axis_order
         return ('t', 'p', 'g', 'c', 'z')  # Default axis order
@@ -141,11 +141,15 @@ class EDAEvent(MutableModel):
                 
             # If values differ, return the comparison result
             if self_val != other_val:
+                if dim == 'z' and hasattr(self.sequence, 'z_direction'):
+                    # For z-direction comparison, use the sequence's z_direction
+                    return self._get_z_comparison(other, self_val, other_val)
                 # For string comparison (like position group names)
                 if isinstance(self_val, str) and isinstance(other_val, str) and dim != 'c':
                     return self_val < other_val
                 # For numeric comparisons (time, position index, z, channel index)
                 try:
+                    print(dim, self, other, self_val, other_val)
                     return float(self_val) < float(other_val)
                 except ValueError:
                     # One of the items could not be indexed, it will go later
@@ -155,12 +159,30 @@ class EDAEvent(MutableModel):
                         return True
                     else:
                         print('Error in channel comparison')
-  
-                
-        # If all dimensions are equal, events are considered equal for ordering
-        # In this case, we'll use the object id as a tiebreaker for consistent ordering
+
+        # If everything is equal, this should not matter, the set will reject the event
         return id(self) < id(other)
     
+    def _get_z_comparison(self, other: Self, self_z: Any, other_z: Any) -> bool:
+        """Determine the z comparison direction based on z_direction property."""
+        if not hasattr(self.sequence, 'z_direction'):
+            return self_z < other_z  # Default to ascending order
+            
+        z_direction = self.sequence.z_direction
+        
+        if z_direction == "up":
+            return self_z < other_z
+        elif z_direction == "down":
+            return self_z > other_z
+        elif z_direction == "alternate":
+            # For alternate mode, even channels go up, odd channels go down
+            channel_index = self._get_channel_index()
+            if channel_index is False:
+                return self_z < other_z  # Default if channel index not found
+            return self_z < other_z if channel_index % 2 == 0 else self_z > other_z
+        else:
+            return self_z < other_z  # Unknown direction, default to ascending
+
     def __eq__(self, other: object) -> bool:
         """
         Check if two EDAEvents are equal based on the axis_order from the sequence.

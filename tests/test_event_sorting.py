@@ -401,3 +401,142 @@ class TestEDAEventSorting:
         
         # Different channel should not be equal
         assert event1 != event3
+
+def test_z_direction_ordering():
+    """Test that z_direction parameter affects the z-ordering of events."""
+    # Create a sequence with 'up' z_direction (default)
+    up_sequence = EDASequence(axis_order="ztpgc", z_direction="up")
+    
+    # Create a sequence with 'down' z_direction
+    down_sequence = EDASequence(axis_order="ztpgc", z_direction="down")
+    
+    # Create events with different z positions for 'up' sequence
+    up_events = [
+        EDAEvent(
+            channel=Channel(config="DAPI"),
+            z_pos=2.0,
+            pos_index=1,
+            min_start_time=0.0,
+            sequence=up_sequence
+        ),
+        EDAEvent(
+            channel=Channel(config="DAPI"),
+            z_pos=0.0,
+            pos_index=1,
+            min_start_time=0.0,
+            sequence=up_sequence
+        ),
+        EDAEvent(
+            channel=Channel(config="DAPI"),
+            z_pos=1.0,
+            pos_index=1,
+            min_start_time=0.0,
+            sequence=up_sequence
+        ),
+    ]
+    
+    # Create similar events but for 'down' sequence
+    down_events = [
+        EDAEvent(
+            channel=Channel(config="DAPI"),
+            z_pos=2.0,
+            pos_index=1,
+            min_start_time=0.0,
+            sequence=down_sequence
+        ),
+        EDAEvent(
+            channel=Channel(config="DAPI"),
+            z_pos=0.0,
+            pos_index=1,
+            min_start_time=0.0,
+            sequence=down_sequence
+        ),
+        EDAEvent(
+            channel=Channel(config="DAPI"),
+            z_pos=1.0,
+            pos_index=1,
+            min_start_time=0.0,
+            sequence=down_sequence
+        ),
+    ]
+    
+    # Sort up_events - with z_direction="up", lower z values should come first
+    sorted_up_events = sorted(up_events)
+    assert sorted_up_events[0].z_pos == 0.0
+    assert sorted_up_events[1].z_pos == 1.0
+    assert sorted_up_events[2].z_pos == 2.0
+    
+    # Sort down_events - with z_direction="down", higher z values should come first
+    sorted_down_events = sorted(down_events)
+    assert sorted_down_events[0].z_pos == 2.0
+    assert sorted_down_events[1].z_pos == 1.0
+    assert sorted_down_events[2].z_pos == 0.0
+    
+    # Test with events that have the same z values but different time values
+    # to ensure z_direction only affects z comparisons
+    mixed_up_events = [
+        EDAEvent(
+            channel=Channel(config="DAPI"),
+            z_pos=1.0,
+            pos_index=1,
+            min_start_time=2.0,
+            sequence=up_sequence
+        ),
+        EDAEvent(
+            channel=Channel(config="DAPI"),
+            z_pos=1.0,
+            pos_index=1,
+            min_start_time=0.0,
+            sequence=up_sequence
+        ),
+    ]
+    
+    sorted_mixed_up = sorted(mixed_up_events)
+    # Time should still be the primary sort factor for same z positions
+    assert sorted_mixed_up[0].min_start_time == 0.0
+    assert sorted_mixed_up[1].min_start_time == 2.0
+
+
+def test_alternate_z_direction():
+    """Test that alternate z_direction makes even channels go up and odd channels go down."""
+    # Create a sequence with alternate z direction
+    sequence = EDASequence(
+        axis_order="czpgt",
+        z_direction="alternate",
+        channels=("DAPI", "FITC", "TRITC")
+    )
+    
+    # Create events with different channels and z positions
+    events = []
+    
+    # Create events for all channels and z positions
+    for channel in ["DAPI", "FITC", "TRITC"]:
+        for z in [0.0, 1.0, 2.0]:
+            events.append(EDAEvent(
+                channel=Channel(config=channel),
+                z_pos=z,
+                pos_index=1,
+                min_start_time=0.0,
+                sequence=sequence
+            ))
+    
+    # Sort the events
+    sorted_events = sorted(events)
+    
+    # With axis_order="czpgt", events should first be sorted by channel, then by z
+    # For even channels (DAPI, TRITC), z should go up
+    # For odd channels (FITC), z should go down
+    expected_order = [
+        ("DAPI", 0.0), ("DAPI", 1.0), ("DAPI", 2.0),  # DAPI (idx 0) goes up
+        ("FITC", 2.0), ("FITC", 1.0), ("FITC", 0.0),  # FITC (idx 1) goes down
+        ("TRITC", 0.0), ("TRITC", 1.0), ("TRITC", 2.0)  # TRITC (idx 2) goes up
+    ]
+    # Verify the sorted order
+    for i, event in enumerate(sorted_events):
+        expected_channel, expected_z = expected_order[i]
+        assert event.channel.config == expected_channel, f"Expected channel {expected_channel}, got {event.channel.config} at index {i}"
+        assert event.z_pos == expected_z, f"Expected z_pos {expected_z}, got {event.z_pos} at index {i}"
+
+if __name__ == "__main__":
+
+    test_alternate_z_direction()
