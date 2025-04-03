@@ -10,6 +10,7 @@ class instrumentSettings(metaclass=Singleton):
         self._galvo_maxV = instrSettDefault.GALVO_MAXV
         self._galvo_minV = instrSettDefault.GALVO_MINV
         self._maxRate = instrSettDefault.MAX_RATE
+        self._pixel_size = instrSettDefault.PIXEL_SIZE
 
     @property
     def galvo_calibration(self):
@@ -29,3 +30,8 @@ class instrumentSettings(metaclass=Singleton):
     def maxRate(self):
         """The maximum rate for the output [Hz]"""
         return self._maxRate
+    
+    @property
+    def pixel_size(self):
+        """The Pixel size of the camera [um/px]"""
+        return self._pixel_size

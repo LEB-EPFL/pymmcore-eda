@@ -75,3 +75,33 @@ class SmartActuator_scan:
         
         # Empty the queue after the smart events are generated
         if self.skip_frames: self.queue_manager.empty_queue()
+
+
+    def _act_from_mouse_press(self, coordinates):
+        """TEMP: Function called to generate a smart scan event when the mouse is pressed on the screnn"""
+        
+        coordinates = np.array(coordinates)
+        coordinates = np.clip(coordinates, 0, 2048)
+        mask = np.zeros((2048, 2048))
+        mask[coordinates[0]-50:coordinates[0]+50, coordinates[1]-50:coordinates[1]+50] = 1
+        
+        print(f'Generating {self.n_events} smart Scan frame\n')
+
+        # TODO Manage PS
+        ps = 1 # pixel size so that the total field of view is ~ 100 x 100 µm2
+        
+        for i in range(1,self.n_events+1):
+            event = MDAEvent(channel={"config":"DAPI (365nm)", "exposure": 100.}, 
+                            index={"t": -i, "c": 1}, 
+                            min_start_time=0,
+                            keep_shutter_open=True,
+                            metadata={
+                                CustomKeyes.GALVO: {
+                                    GalvoParams.SCAN_MASK: mask,
+                                    GalvoParams.PIXEL_SIZE : ps,
+                                    GalvoParams.STRATEGY: ScanningStragies.SNAKE,
+                                    GalvoParams.DURATION : 0.1,
+                                    GalvoParams.TRIGGERED : True,
+                                    GalvoParams.TIMEOUT : 5
+                                }})
+            self.queue_manager.register_event(event)
