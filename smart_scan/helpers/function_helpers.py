@@ -1,10 +1,9 @@
-import numpy as np
-import ctypes
 from ctypes import *
-import sys
-from smart_scan.dependencies.dwfconstants import *
 from enum import IntEnum
-import time
+
+import numpy as np
+
+from smart_scan.dependencies.dwfconstants import *
 
 
 class ScanningStragies(IntEnum):
@@ -24,7 +23,6 @@ def mask2active_pixels(
         active_pixels = np.transpose(np.nonzero(mask))
 
     elif scan_strategy == ScanningStragies.SNAKE:
-
         # generate 2 semi-masks with odd and even lines
         semi_mask_1 = np.zeros(mask.shape)
         semi_mask_2 = np.zeros(mask.shape)
@@ -46,7 +44,6 @@ def mask2active_pixels(
 
 def generate_mask(h: int, w: int, semidim_h: int, semidim_w: int) -> np.ndarray:
     """Generate the binary mask of shape (h,w) with different strategies."""
-
     # To begin with: ones in the center
     c_w = int(w / 2)
     c_h = int(h / 2)
@@ -64,5 +61,3 @@ def generate_mask(h: int, w: int, semidim_h: int, semidim_w: int) -> np.ndarray:
     )
 
     return mask
-
-

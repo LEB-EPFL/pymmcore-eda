@@ -1,10 +1,10 @@
 """
-   DWFConstants (definitions file for DWF library)
-   Author:  Digilent, Inc.
-   Revision:  2024-07-24
+DWFConstants (definitions file for DWF library)
+Author:  Digilent, Inc.
+Revision:  2024-07-24.
 
-   Must install:                       
-       Python 2.7 or 3
+Must install:
+Python 2.7 or 3
 """
 
 from ctypes import *

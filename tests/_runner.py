@@ -1,5 +1,6 @@
-from threading import Thread
 import datetime
+from threading import Thread
+
 
 class MockRunner:
     def __init__(self, time_machine=None):
@@ -19,11 +20,11 @@ class MockRunner:
                 acq_time = datetime.timedelta(seconds=acq_time)
                 acq_time = datetime.datetime.fromtimestamp(acq_time.total_seconds())
 
-                acq_time = f"{acq_time.second:02d}.{acq_time.microsecond//1000:03d}"
+                acq_time = f"{acq_time.second:02d}.{acq_time.microsecond // 1000:03d}"
             else:
-                acq_time = ''
-            current_time = datetime.datetime.now()
-            total_time = f"{current_time.minute:02d}:{current_time.second:02d}.{current_time.microsecond//1000:03d}"
+                acq_time = ""
+            now = datetime.datetime.now()
+            total_time = f"{now.minute:02d}:{now.second:02d}.{now.microsecond//000:03d}"
             print(f"{total_time}|{acq_time} |{event}")
             self.events.append(event)
             for k, v in event.index.items():

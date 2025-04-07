@@ -40,5 +40,6 @@ def test_mda():
     assert len(runner.events) == 3
     print(runner.events)
 
+
 if __name__ == "__main__":
     test_mda()

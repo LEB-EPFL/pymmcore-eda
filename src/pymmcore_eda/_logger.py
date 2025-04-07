@@ -19,7 +19,7 @@ my_info_format = formatter.FORMATS[logging.INFO].replace(
 formatter.FORMATS[logging.INFO] = my_info_format
 
 
-def configure_logging():
+def configure_logging() -> None:
     for handler in logger.handlers:
         logger.removeHandler(handler)
 

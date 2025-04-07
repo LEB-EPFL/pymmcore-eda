@@ -1,6 +1,7 @@
 import logging
-import smart_scan.helpers.loggingDefaults as DEFAULT
 import os
+
+import smart_scan.helpers.loggingDefaults as DEFAULT
 
 
 # Helper to create loggers within the projects
@@ -10,7 +11,6 @@ def createLogger(
     loggerName=DEFAULT.loggerName,
     fileName=DEFAULT.fileName,
 ) -> logging:
-
     # creates the log folder if it doesn't exist
     if not os.path.exists(DEFAULT.path):
         os.mkdir(DEFAULT.logFolderName)

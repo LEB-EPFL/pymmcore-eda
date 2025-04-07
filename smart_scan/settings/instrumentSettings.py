@@ -1,5 +1,5 @@
-from smart_scan.settings import instrumentSettingsDefaults as instrSettDefault
 from smart_scan.helpers.class_helpers import Singleton
+from smart_scan.settings import instrumentSettingsDefaults as instrSettDefault
 
 
 class instrumentSettings(metaclass=Singleton):
@@ -14,18 +14,18 @@ class instrumentSettings(metaclass=Singleton):
     @property
     def galvo_calibration(self):
         return self._galvo_calibration
-    
+
     @property
     def galvo_maxV(self):
-        """The maximum V for the galvo mirrors [V]"""
+        """The maximum V for the galvo mirrors [V]."""
         return self._galvo_maxV
-    
+
     @property
     def galvo_minV(self):
-        """The minimum V for the galvo mirrors [V]"""
+        """The minimum V for the galvo mirrors [V]."""
         return self._galvo_minV
-    
+
     @property
     def maxRate(self):
-        """The maximum rate for the output [Hz]"""
+        """The maximum rate for the output [Hz]."""
         return self._maxRate

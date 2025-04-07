@@ -1,14 +1,19 @@
-from pymmcore_plus import CMMCorePlus
-from pymmcore_plus.mda import MDAEngine
-import useq
-from smart_scan.helpers.function_helpers import ScanningStragies
-from smart_scan.devices import Galvo_Scanners, Scanner, DummyScanners
-from enum import IntEnum
-import numpy as np
 import threading
 import time
+from enum import IntEnum
+from typing import TYPE_CHECKING
 
-from collections.abc import Sequence
+import numpy as np
+import useq
+from pymmcore_plus import CMMCorePlus
+from pymmcore_plus.mda import MDAEngine
+
+from smart_scan.devices import Scanner
+from smart_scan.helpers.function_helpers import ScanningStragies
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
+
 
 class CustomKeyes(IntEnum):
     GALVO = 0
@@ -24,9 +29,12 @@ class GalvoParams(IntEnum):
 
 
 class CustomEngine(MDAEngine):
-
-
-    def __init__(self, mmc: CMMCorePlus, galvo_scanners : Scanner, use_hardware_sequencing: bool = True) -> None:
+    def __init__(
+        self,
+        mmc: CMMCorePlus,
+        galvo_scanners: Scanner,
+        use_hardware_sequencing: bool = True,
+    ) -> None:
         self._mmc = mmc
         self.use_hardware_sequencing = use_hardware_sequencing
 
@@ -62,7 +70,6 @@ class CustomEngine(MDAEngine):
         """
         self._gs.connect()
 
-
     def setup_event(self, event: useq.MDAEvent) -> None:
         """Prepare state of system (hardware, etc.) for `event`.
 
@@ -71,13 +78,12 @@ class CustomEngine(MDAEngine):
         The engine should be in a state where it can call `exec_event`
         without any additional preparation.
         """
-        
         if str(CustomKeyes.GALVO.value) in event.metadata:
             self._smart_scan_setup(event.metadata)
-            
+
             # Delay to allow the scan to be triggered by the camera
             time.sleep(0.1)
-            
+
             super().setup_event(event)
         else:
             super().setup_event(event)
@@ -94,7 +100,6 @@ class CustomEngine(MDAEngine):
     def teardown_sequence(self, sequence: useq.MDASequence):
         self._gs.disconnect()
 
-
     def _smart_scan_setup(self, metadata: dict) -> None:
         galvo_string = str(CustomKeyes.GALVO.value)
 
@@ -107,19 +112,22 @@ class CustomEngine(MDAEngine):
                 scan_strategy=metadata[galvo_string][GalvoParams.STRATEGY],
                 duration=metadata[galvo_string][GalvoParams.DURATION],
                 triggered=metadata[galvo_string][GalvoParams.TRIGGERED],
-                timeout=metadata[galvo_string][GalvoParams.TIMEOUT]
+                timeout=metadata[galvo_string][GalvoParams.TIMEOUT],
             )
             print("Ending scan task.")
-
 
         # Start the scan operation in a new thread
         scan_thread = threading.Thread(target=scan_task, daemon=False)
         scan_thread.start()
-        
+
+
 if __name__ == "__main__":
     core = CMMCorePlus.instance()
     core.setDeviceAdapterSearchPaths(
-    ["C:/Program Files/Micro-Manager-2.0/", *list(core.getDeviceAdapterSearchPaths())]
+        [
+            "C:/Program Files/Micro-Manager-2.0/",
+            *list(core.getDeviceAdapterSearchPaths()),
+        ]
     )
     core.loadSystemConfiguration()
 
@@ -135,28 +143,28 @@ if __name__ == "__main__":
         useq.MDAEvent(
             metadata={
                 CustomKeyes.GALVO: {
-                    GalvoParams.SCAN_MASK: np.ones([40,40]),
-                    GalvoParams.PIXEL_SIZE : 2.56,
+                    GalvoParams.SCAN_MASK: np.ones([40, 40]),
+                    GalvoParams.PIXEL_SIZE: 2.56,
                     GalvoParams.STRATEGY: ScanningStragies.SNAKE,
-                    GalvoParams.DURATION : 1,
-                    GalvoParams.TRIGGERED : False,
-                    GalvoParams.TIMEOUT : 10
-                    }
+                    GalvoParams.DURATION: 1,
+                    GalvoParams.TRIGGERED: False,
+                    GalvoParams.TIMEOUT: 10,
+                }
             }
         ),
         useq.MDAEvent(),
         useq.MDAEvent(
             metadata={
                 CustomKeyes.GALVO: {
-                    GalvoParams.SCAN_MASK: np.ones([40,40]),
-                    GalvoParams.PIXEL_SIZE : 2.56,
+                    GalvoParams.SCAN_MASK: np.ones([40, 40]),
+                    GalvoParams.PIXEL_SIZE: 2.56,
                     GalvoParams.STRATEGY: ScanningStragies.RASTER,
-                    GalvoParams.DURATION : 0.7,
-                    GalvoParams.TRIGGERED : False,
-                    GalvoParams.TIMEOUT : 10
-                    }
+                    GalvoParams.DURATION: 0.7,
+                    GalvoParams.TRIGGERED: False,
+                    GalvoParams.TIMEOUT: 10,
+                }
             }
         ),
-        ]
+    ]
 
     core.run_mda(experiment)

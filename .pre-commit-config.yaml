@@ -32,3 +32,4 @@ repos:
           - useq-schema >= 0.5.1
           - psygnal
           - typer
+          - pymmcore-plus

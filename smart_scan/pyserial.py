@@ -1,5 +1,6 @@
-import serial
 from dataclasses import dataclass
+
+import serial
 
 
 @dataclass
@@ -18,15 +19,11 @@ class Laser:
     show_power: str = "sh pow\r"  # Show laser power in uW
 
     def set_power(self, power: int) -> str:
-        """
-        Returns the command to set the laser power in uW.
-        """
+        """Returns the command to set the laser power in uW."""
         return f"ch 1 pow {power} mic\r"
 
     def send(self, cmd: str) -> None:
-        """
-        Send a command to the laser device and read the response.
-        """
+        """Send a command to the laser device and read the response."""
         self.ser.write(cmd.encode())
         self.ser.flush()
 
@@ -39,4 +36,3 @@ class Laser:
     def disconnect(self):
         self.ser.flush()
         self.ser.close()
-
