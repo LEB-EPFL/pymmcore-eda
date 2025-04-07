@@ -149,10 +149,10 @@ class DynamicEventQueue:
             return self._unique_indexes['c']
         elif dim in self._unique_indexes:
             return list(self._unique_indexes[dim])
-            
-        return []
-    
-    def get_events_at_time(self, timestamp):
+        else:
+            return []
+
+    def get_events_at_time(self, timestamp: float) -> list[EDAEvent]:
         """Get all events scheduled at a specific timestamp."""
         return self._events_by_time.get(timestamp, [])
     
