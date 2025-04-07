@@ -113,9 +113,9 @@ class Dummy_Analyser:
 class Analyser:
     """Analyse the image and produce an event score map for the interpreter."""
 
-    def __init__(self, hub: EventHub, model_path : str = None):
-        
-        # Import tensorflow here, so that we don't need to do it when using DummyAnalyser
+    def __init__(self, hub: EventHub):
+        # Import tensorflow here, so that we don't need to do it when
+        # using DummyAnalyser
         from tensorflow import keras
 
         settings = AnalyserSettings()
@@ -148,9 +148,8 @@ class Analyser:
         ]
         for _ in range(self.n_fake_predictions):
             self.model.predict(input_cropped)
-        
-    def _analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict):
-        
+
+    def _analyse(self, img: np.ndarray, event: MDAEvent, metadata: dict) -> None:
         # Skip if not the first channel
         if event.index.get("c", 0) != 0:
             return

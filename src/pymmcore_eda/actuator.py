@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from useq import MDAEvent
-
 from pymmcore_eda._logger import logger
 
 if TYPE_CHECKING:
