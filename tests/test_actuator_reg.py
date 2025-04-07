@@ -7,9 +7,9 @@ def test_actuator_reg():
     from pymmcore_plus import CMMCorePlus
     from useq import MDASequence
 
+    from pymmcore_eda._eda_sequence import EDASequence
     from pymmcore_eda.actuator import MDAActuator
     from pymmcore_eda.queue_manager import QueueManager
-    from pymmcore_eda._eda_sequence import EDASequence
 
     mmc = CMMCorePlus()
     mmc.setDeviceAdapterSearchPaths(
@@ -23,7 +23,6 @@ def test_actuator_reg():
 
     eda_sequence = EDASequence(channels=("DAPI", "Cy5"))
     queue_manager = QueueManager(eda_sequence=eda_sequence)
-
 
     mda_sequence = MDASequence(
         channels=["DAPI"],
@@ -51,18 +50,18 @@ def test_actuator_reg():
     queue_manager.stop_seq()
     time.sleep(1)
     assert len(runner.events) == 6
-    assert runner._axis_max['c'] == 1
+    assert runner._axis_max["c"] == 1
     assert runner.events[0].channel.config == "DAPI"
-    assert runner._axis_max['t'] == 2
-    
+    assert runner._axis_max["t"] == 2
+
 
 def test_double_reg():
     from pymmcore_plus import CMMCorePlus
     from useq import MDASequence
 
+    from pymmcore_eda._eda_sequence import EDASequence
     from pymmcore_eda.actuator import MDAActuator
     from pymmcore_eda.queue_manager import QueueManager
-    from pymmcore_eda._eda_sequence import EDASequence
 
     mmc = CMMCorePlus()
     mmc.setDeviceAdapterSearchPaths(
@@ -76,7 +75,6 @@ def test_double_reg():
 
     eda_sequence = EDASequence(channels=("DAPI", "Cy5"))
     queue_manager = QueueManager(eda_sequence=eda_sequence)
-
 
     mda_sequence = MDASequence(
         channels=["DAPI"],
@@ -104,11 +102,9 @@ def test_double_reg():
     queue_manager.stop_seq()
     time.sleep(1)
     assert len(runner.events) == 6
-    assert runner._axis_max['c'] == 1
+    assert runner._axis_max["c"] == 1
     assert runner.events[0].channel.config == "DAPI"
-    assert runner._axis_max['t'] == 2
-
-
+    assert runner._axis_max["t"] == 2
 
 
 if __name__ == "__main__":

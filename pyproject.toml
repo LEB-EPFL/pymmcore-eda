@@ -25,29 +25,34 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-    "pymmcore-plus",
+    "pymmcore-plus<0.13.6",
     "sortedcontainers>=2.4.0",
 ]
 
 [project.optional-dependencies]
+dev = [
+    "ipython",
+    "mypy",
+    "pdbpp; sys_platform != 'win32'",
+    "pre-commit",
+    "ruff",
+    "tensorstore-stubs",
+]
 
 [project.urls]
 Source = "https://github.com/LEB-EPFL/pymmcore-eda"
 Tracker = "https://github.com/LEB-EPFL/pymmcore-eda/issues"
 Documentation = "https://LEB-EPFL.github.io/pymmcore-eda"
 
-[tool.setuptools]
-packages = {find = {where = ["src"]}}
-
 [tool.pytest.ini_options]
 log_cli = true
 log_cli_level = "INFO"
-pythonpath = ["src"]
 
 # https://beta.ruff.rs/docs/rules/
 [tool.ruff]
 line-length = 88
-target-version = "py312"
+target-version = "py311"
+exclude = ["smart_scan"]
 
 [tool.ruff.lint]
 pydocstyle = { convention = "numpy" }
@@ -81,3 +86,46 @@ ignore = [
 # https://docs.astral.sh/ruff/formatter/
 [tool.ruff.format]
 docstring-code-format = true
+
+# https://mypy.readthedocs.io/en/stable/config_file.html
+[tool.mypy]
+files = ["src/**", "smart_scan"]
+strict = true
+disallow_any_generics = false
+disallow_subclassing_any = false
+show_error_codes = true
+pretty = true
+explicit_package_bases = true
+plugins = "pydantic.mypy"
+# see https://github.com/python/mypy/issues/5374 and related discussions
+# it causes more pain than it solves
+disable_error_code = ["type-abstract"]
+python_version = "3.11"
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+
+# https://coverage.readthedocs.io/en/6.4/config.html
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "@overload",
+    "except ImportError",
+    "raise AssertionError",
+    "\\.\\.\\.",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
+show_missing = true
+
+[tool.coverage.run]
+source = ['pymmcore_plus']
+omit = ["src/pymmcore_plus/_build.py"]
+
+[tool.typos.files]
+extend-exclude = ["smart_scan"] 
+
+[tool.typos.default]
+extend-ignore-identifiers-re = ["(?i)nd2?.*", "(?i)ome", "anager", "ba"]

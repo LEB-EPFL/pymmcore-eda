@@ -1,9 +1,10 @@
-import time
-
-from pathlib import Path
-import tensorstore as ts
 import shutil
 import sys
+import time
+from pathlib import Path
+
+import tensorstore as ts
+
 sys.path.append(str(Path(__file__).parent.parent))
 
 
@@ -33,7 +34,7 @@ def test_mda():
         time_plan={"interval": 0.1, "loops": 3},
     )
     base_actuator = MDAActuator(queue_manager, mda_sequence)
-    
+
     loc = Path(__file__).parent / "test_data/test.ome.zarr"
     writer = AdaptiveWriter(path=loc, delete_existing=True)
 
@@ -42,20 +43,23 @@ def test_mda():
     base_actuator.thread.join()
     queue_manager.stop_seq()
     time.sleep(3)
-    zarr_store = ts.open({
-        "driver": "zarr",
-        "kvstore": {
-            "driver": "file",
-            "path": str(loc), 
-        },
-    }).result()
+    zarr_store = ts.open(
+        {
+            "driver": "zarr",
+            "kvstore": {
+                "driver": "file",
+                "path": str(loc),
+            },
+        }
+    ).result()
 
     # Access data
     data = zarr_store.read().result()
     assert data.shape == (1, 3, 512, 512)
 
     shutil.rmtree(loc)
-    print('removed', loc)
+    print("removed", loc)
+
 
 if __name__ == "__main__":
     test_mda()
