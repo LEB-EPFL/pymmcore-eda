@@ -35,9 +35,10 @@ class SmartActuator_scan:
         
         if True:
             
-            print(f'Generating {self.n_events} smart Scan frame\n')
 
             mask = Image.fromarray(image.copy())
+            
+            print(f'Generating {self.n_events} smart Scan frame\n')
             
             # In case the non-null values in the mask are too many, usefull to resize it. Avoid for photoconversion
             # mask = mask.resize((124, 124))
@@ -47,20 +48,24 @@ class SmartActuator_scan:
             mask = np.array(mask, dtype=bool)
             h = mask.shape[0]
             ps = 102.4 / h # pixel size so that the total field of view is ~ 100 x 100 µm2
+
+            
             
             for i in range(1,self.n_events+1):
                 event = MDAEvent(channel={"config":"DAPI (365nm)", "exposure": 100.}, 
-                                index={"t": -i, "c": 1}, 
+                                index={"t": -i, "c": 2}, 
                                 min_start_time=0,
                                 keep_shutter_open=True,
                                 metadata={
                                     CustomKeyes.GALVO: {
                                         GalvoParams.SCAN_MASK: mask,
+                                        # GalvoParams.SCAN_MASK: mask.tolist(),
                                         GalvoParams.PIXEL_SIZE : ps,
                                         GalvoParams.STRATEGY: ScanningStragies.SNAKE,
                                         GalvoParams.DURATION : 0.1,
                                         GalvoParams.TRIGGERED : True,
                                         GalvoParams.TIMEOUT : 5
+                                        
                                     }})
                 self.queue_manager.register_event(event)
 
@@ -81,25 +86,31 @@ class SmartActuator_scan:
         coordinates = np.array(coordinates)
         coordinates = np.clip(coordinates, 0, 2048)
         mask = np.zeros((2048, 2048))
-        mask[coordinates[0]-50:coordinates[0]+50, coordinates[1]-50:coordinates[1]+50] = 1
+        print(f'Coordinates: {coordinates[0]}, {coordinates[1]}')
+        semi_size = 50
+        mask[coordinates[0]-semi_size:coordinates[0]+semi_size, coordinates[1]-semi_size:coordinates[1]+semi_size] = 1
         
         print(f'Generating {self.n_events} smart Scan frame\n')
+        # print(f"Generating {self.n_events} smart scan frame(s) with mask shape {mask.shape}") # Alara
+
+        
 
         # TODO Manage PS
-        ps = 1 # pixel size so that the total field of view is ~ 100 x 100 µm2
+        ps = 102.4 / 2048 # pixel size so that the total field of view is ~ 100 x 100 µm2
         
         for i in range(1,self.n_events+1):
             event = MDAEvent(channel={"config":"DAPI (365nm)", "exposure": 100.}, 
-                            index={"t": -i, "c": 1}, 
+                            index={"t": -i, "c": 2}, 
                             min_start_time=0,
                             keep_shutter_open=True,
                             metadata={
                                 CustomKeyes.GALVO: {
                                     GalvoParams.SCAN_MASK: mask,
+                                    # GalvoParams.SCAN_MASK: mask.tolist(),
                                     GalvoParams.PIXEL_SIZE : ps,
                                     GalvoParams.STRATEGY: ScanningStragies.SNAKE,
                                     GalvoParams.DURATION : 0.1,
                                     GalvoParams.TRIGGERED : True,
                                     GalvoParams.TIMEOUT : 5
-                                }})
+                                    }})
             self.queue_manager.register_event(event)
