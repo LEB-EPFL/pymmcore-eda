@@ -60,18 +60,20 @@ prediction_time = 0.8
 # Interpreter parameters
 smart_event_period = 3      # enforce a smart event generation evert smart_event_period frames. 0 if not enforcing
 
-save_path = "test_data/20250410/test13.ome.zarr"
+save_path = "test_data/20250411/test05.ome.zarr"
 
 # define the MDA sequence
 # "Cy5 (635nm)"
 mda_sequence = MDASequence(
     channels=(
         Channel(config="YFP (500nm)",exposure=100),
-        Channel(config="RFP (580nm)",exposure=100),
+        # Channel(config="RFP (580nm)",exposure=100),
         ),
     time_plan={"interval": 2, "loops": 5},
     # keep_shutter_open_across = {'t','c'},
 )
+
+n_channel = len(mda_sequence.channels)
 
 ########################################
 # Define the acquisition thread
@@ -256,7 +258,7 @@ mmc.setChannelGroup("Channel")
 # Set the writer
 loc = Path(__file__).parent / save_path
 # loc = Path(__file__).parent / "test_data/20250324/U2OS_MTDR_50nM_03_th08.ome.zarr"
-writer = AdaptiveWriter(path=loc, delete_existing=True)
+writer = AdaptiveWriter(path=loc, delete_existing=True, n_channel = n_channel)
 
 # initialise all components
 # hub = EventHub(mmc.mda, writer=writer)
@@ -267,10 +269,10 @@ base_actuator = MDAActuator(queue_manager, mda_sequence)
 
 if use_smart_scan:
     interpreter = Interpreter_scan(hub, smart_event_period = smart_event_period)
-    smart_actuator = SmartActuator_scan(queue_manager, hub, n_events=n_smart_events, skip_frames=skip_frames)
+    smart_actuator = SmartActuator_scan(queue_manager, hub, n_events=n_smart_events, skip_frames=skip_frames, n_channel=n_channel)
 else:
     interpreter = Interpreter_widefield(hub, smart_event_period = smart_event_period)
-    smart_actuator = SmartActuator_widefield(queue_manager, hub, n_events=n_smart_events, skip_frames=skip_frames)
+    smart_actuator = SmartActuator_widefield(queue_manager, hub, n_events=n_smart_events, skip_frames=skip_frames, n_channel=n_channel)
 
 ########################################
 

@@ -34,7 +34,7 @@ def serialize_custom_object(obj):
             return obj.tolist()  # Convert numpy arrays to lists
         return obj  # If it's already serializable, return it as is
 
-def save_metadata(metadata, tensorstore_path = "/Users/giorgio/Desktop/" ):
+def save_metadata(metadata, tensorstore_path = r"C:\Users\tortarol\code\pymmcore-eda\test_data\20250411\\" ):
     # Define a path for the metadata JSON file
     metadata_path = tensorstore_path + "metadata.json"
     
@@ -51,16 +51,19 @@ class AdaptiveWriter(TensorStoreHandler):
     def __init__(
         self,
         *,
+        n_channel : int,
         driver: TsDriver = "zarr",
         kvstore: str | dict | None = "memory://",
         path: str | PathLike | None = None,
         delete_existing: bool = False,
         spec: Mapping | None = None,
+        
     ) -> None:
         super().__init__(driver=driver, kvstore=kvstore, path=path, delete_existing=delete_existing, spec=spec)
         # So we are flexible with what events are coming in
         self._nd_storage = False
         self.reshape_on_finished: bool = True
+        self.n_channel = n_channel
 
     def sequenceFinished(self, seq: useq.MDASequence) -> None:
         super().sequenceFinished(seq)
@@ -88,7 +91,7 @@ class AdaptiveWriter(TensorStoreHandler):
     def frameReady(
             self, frame: np.ndarray, event: useq.MDAEvent, meta: FrameMetaV1
         ) -> None:
-        if event.index.get("c", 0) == 1:
+        if event.index.get("c", 0) == self.n_channel:
             
             # Save metadata into Zarr array attrs with unique key (e.g. mask)
             try:

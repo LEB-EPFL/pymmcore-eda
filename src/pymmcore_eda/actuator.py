@@ -44,12 +44,13 @@ class MDAActuator:
 class SmartActuator_widefield:
     """Actuator that subscribes to new_interpretation and reacts to incoming events."""
 
-    def __init__(self, queue_manager: QueueManager, hub: EventHub, n_events: int = 3, skip_frames: bool = False):
+    def __init__(self, queue_manager: QueueManager, hub: EventHub, n_channels : int, n_events: int = 3, skip_frames: bool = False):
         self.queue_manager = queue_manager
         self.hub = hub
         self.hub.new_interpretation.connect(self._act)
         self.n_events = n_events
         self.skip_frames= skip_frames
+        self.n_channels = n_channels
 
     def _act(self, interpretation, event, metadata):
         
@@ -61,7 +62,7 @@ class SmartActuator_widefield:
         for i in range(1,self.n_events+1):
 
             curr_event = MDAEvent(channel={"config":"Cy5 (635nm)", "exposure": 100}, 
-                            index={"t": -i, "c": 1}, 
+                            index={"t": -i, "c": self.n_channels}, 
                             min_start_time=0,
                             keep_shutter_open=True, # to hasten acquisition
                             )
