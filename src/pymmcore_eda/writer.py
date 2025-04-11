@@ -6,6 +6,8 @@ import shutil
 import os
 import json
 
+import numpy as np
+
 from smart_scan.custom_engine import CustomKeyes, GalvoParams
 
 from typing import TYPE_CHECKING
@@ -20,6 +22,29 @@ if TYPE_CHECKING:
     from useq import FrameMetaV1
 
 FRAME_DIM = "frame"
+
+def serialize_custom_object(obj):
+        """Convert custom objects to a JSON serializable format."""
+        if isinstance(obj, CustomKeyes):
+            return obj.value  # or some property of CustomKeyes that is serializable
+        if isinstance(obj, GalvoParams):
+            # Convert to a dictionary or list
+            return obj.__dict__  # or choose specific attributes
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()  # Convert numpy arrays to lists
+        return obj  # If it's already serializable, return it as is
+
+def save_metadata(metadata, tensorstore_path = "/Users/giorgio/Desktop/" ):
+    # Define a path for the metadata JSON file
+    metadata_path = tensorstore_path + "metadata.json"
+    
+    try:
+        with open(metadata_path, "w") as f:
+            json.dump(metadata, f)
+        print(f"Metadata saved to {metadata_path}")
+    except Exception as e:
+        print(f"[Metadata save error]: {e}")
+
 
 class AdaptiveWriter(TensorStoreHandler):
     """A Tensorstorehandler that is optimized for adaptive acquisitions."""
@@ -59,21 +84,44 @@ class AdaptiveWriter(TensorStoreHandler):
             domain=self._ts.IndexDomain(labels=labels),
         )
     
+    
     def frameReady(
             self, frame: np.ndarray, event: useq.MDAEvent, meta: FrameMetaV1
         ) -> None:
         if event.index.get("c", 0) == 1:
             
-            # convert metadata to json for writing, only if event is smart scan 
+            # Save metadata into Zarr array attrs with unique key (e.g. mask)
             try:
-                new_metadata = event.metadata.copy()
-                new_metadata['0'][0] = json.dumps({'0': event.metadata['0'][0].tolist()})
-                event = event.replace(metadata = new_metadata)
-                meta['mda_event'] = meta['mda_event'].replace(metadata = {})
-            except:
-                pass
+                # Deep copy and serialize full metadata
+                full_metadata = event.metadata.copy()
+
+               #  Convert non-serializable objects (numpy arrays, custom objects) to serializable formats
+                for k, v in full_metadata.items():
+                    if isinstance(v, dict):  # If the value is a dictionary, process its items
+                        for sub_k, sub_v in v.items():
+                            v[sub_k] = serialize_custom_object(sub_v)
+                    else:
+                        full_metadata[k] = serialize_custom_object(v)
+
+                # Get the path to the tensor store (assuming self._get_tensor_store() provides it)
+                # tensor_store_path = self._get_tensor_store_path()  # Adjust this method as needed
+                save_metadata(metadata = full_metadata)# , tensorstore_path=self.kvstore)
+            except Exception as e:
+                print(f"[Metadata save error]: {e}")
+            
+            
+            # Old version
+            # try:
+            #     # convert metadata to json for writing, only if event is smart scan 
+            #     new_metadata = event.metadata.copy()
+            #     new_metadata['0'][0] = json.dumps({'0': event.metadata['0'][0].tolist()})
+            #     event = event.replace(metadata = new_metadata)
+            #     meta['mda_event'] = meta['mda_event'].replace(metadata = {})
+            # except:
+            #     pass
 
         super().frameReady(frame, event, meta)
+
 
     def get_shape_chunks_labels(self, frame_shape, seq):
         if not self._nd_storage:
