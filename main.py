@@ -50,6 +50,7 @@ show_live_preview = True    # If True, the live preview is shown
 
 # Empty the pymmcore-plus queue at the end of the series of generated smart events. Can help achieve a target frame-rate, at the expense of skipped frames
 skip_frames = False   
+skip_frames = False   
 
 # Dummy analysis toggle.
 use_dummy_analysis = True   # If False, tensorflow is used to predict events
@@ -62,9 +63,9 @@ smart_event_period = 0      # enforce a smart event generation evert smart_event
 
 # define the MDA sequence
 mda_sequence = MDASequence(
-    channels=(Channel(config="GFP (470nm)",exposure=5),),
-    time_plan={"interval": 5, "loops": 10},
-    keep_shutter_open_across = {'t', 'c'},
+    channels=(Channel(config="Brightfield",exposure=100),),
+    time_plan={"interval": 1, "loops": 5},
+    keep_shutter_open_across = {'t','c'},
 )
 
 ########################################
@@ -185,10 +186,8 @@ mmc.setDeviceAdapterSearchPaths(
 if use_microscope:
     try:
         mmc.loadSystemConfiguration("C:/Control_2/Zeiss-microscope/240715_ZeissAxioObserver7.cfg")
-
         mmc.setProperty("Prime", "Trigger-Expose Out-Mux", 1)
         mmc.setProperty("Prime", "ExposeOutMode", "All Rows")
-        
         mmc.setProperty("pE-800", "Global State", 0)
         mmc.setConfig("Channel","Brightfield")
         mmc.setProperty("pE-800", "Global State", 0)
@@ -199,7 +198,6 @@ if use_microscope:
 
 else: 
     mmc.loadSystemConfiguration()
-
     mmc.setProperty("Camera", "OnCameraCCDXSize", 2048)
     mmc.setProperty("Camera", "OnCameraCCDYSize", 2048)
 
@@ -212,7 +210,8 @@ mmc.mda.engine.use_hardware_sequencing = False
 mmc.setChannelGroup("Channel")
 
 # Set the writer
-loc = Path(__file__).parent / "test_data/Test.ome.zarr"
+loc = Path(__file__).parent / "test_data/Test50.ome.zarr"
+# loc = Path(__file__).parent / "test_data/20250324/U2OS_MTDR_50nM_03_th08.ome.zarr"
 writer = AdaptiveWriter(path=loc, delete_existing=True)
 
 # initialise all components

@@ -199,18 +199,21 @@ class Galvo_Scanners(Scanner):
     def _norm_voltage(self, voltage):
         """Normalises and prepare the voltage to be later ouputted."""
         voltage_f = voltage.astype(np.float64)
-        if np.dtype(voltage[0]) == np.int8 or np.dtype(voltage[0]) == np.uint8:
+
+        v = voltage[0]
+
+        if np.dtype(v) == np.int8 or np.dtype(v) == np.uint8:
             # print("Scaling: UINT8")
             voltage_f /= 128.0
             voltage_f -= 1.0
-        elif np.dtype(voltage[0]) == np.int16:
+        elif np.dtype(v) == np.int16:
             # print("Scaling: INT16")
             voltage_f /= 32768.0
-        elif np.dtype(voltage[0]) == np.uint16:
+        elif np.dtype(v) == np.uint16:
             # print("Scaling: UINT16")
             voltage_f /= 16384.0
             voltage_f -= 1.0
-        elif np.dtype(voltage[0]) == np.int32:
+        elif np.dtype(v) == np.int32:
             # print("Scaling: INT32")
             voltage_f /= 2147483648.0
         

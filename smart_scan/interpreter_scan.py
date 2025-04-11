@@ -32,7 +32,9 @@ class Interpreter_scan:
         # ensure a smart event every smart_event_period frames
         t = event.index.get("t", 0)
         if self.smart_event_period > 0 and t % self.smart_event_period == 0:
-            mask[50:150,50:150] = 1
+            # mask[924:1124,924:1124] = 1
+            mask[200:2000:200,200:2000:200] = 1
+            
 
         # Emit the interpretation result only if not empty
         if np.sum(mask) != 0:

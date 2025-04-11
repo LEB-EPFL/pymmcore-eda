@@ -37,15 +37,13 @@ class SmartActuator_scan:
             
             print(f'Generating {self.n_events} smart Scan frame\n')
 
-
-            # Insert fake mask
-            # mask = np.zeros((2048, 2048))
-            # mask[1200:1600,600:1000] = 1
-            # mask = Image.fromarray(mask.copy())
-            # image[1024:1500, 1024:1500] = 0
-
             mask = Image.fromarray(image.copy())
-            mask = mask.resize((124, 124))
+            
+            # In case the non-null values in the mask are too many, usefull to resize it. Avoid for photoconversion
+            # mask = mask.resize((124, 124))
+            
+            
+            
             mask = np.array(mask, dtype=bool)
             h = mask.shape[0]
             ps = 102.4 / h # pixel size so that the total field of view is ~ 100 x 100 µm2
