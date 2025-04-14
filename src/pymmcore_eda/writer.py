@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import json
+<<<<<<< HEAD
 import os
 import shutil
+=======
+
+>>>>>>> b880f23 (Deleted references to smart_scan, and viewer.)
 from typing import TYPE_CHECKING
 
 from pymmcore_plus.mda.handlers import TensorStoreHandler
