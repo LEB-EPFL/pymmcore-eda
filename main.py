@@ -16,11 +16,12 @@ from pathlib import Path
 
 # User: Set the use case
 use_microscope = False      
+
 use_smart_scan = False      # If False, widefield is used
 n_smart_events = 10       # Number of smart events generated after event detection
 
-# Empty the pymmcore-plus queue at the end of the series of generated smart events. Can help achieve a target frame-rate, at the expense of skipped frames
-skip_frames = True   
+# model_path = "//sb-nas1.rcp.epfl.ch/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
+model_path = "/Volumes/LEB/Scientific_projects/deep_events_WS/data/original_data/training_data/20240224_0205_brightfield_cos7_n5_f1/20240224_0208_model.h5"
 
 # Dummy analysis toggle.
 use_dummy_analysis = True   # If False, tensorflow is used to predict events
@@ -30,6 +31,10 @@ prediction_time = 0.8
 
 # Interpreter parameters
 smart_event_period = 2      # enforce a smart event generation evert smart_event_period frames. 0 if not enforcing
+
+saved_file_path = "test_data/Test.ome.zarr"
+log_file_path = "log/Log.log"
+
 
 # define the MDA sequence
 mda_sequence = MDASequence(

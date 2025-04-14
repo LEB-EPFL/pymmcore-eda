@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 from useq import MDAEvent, Channel
 import numpy as np
 
-from pymmcore_eda._logger import logger
 
 from pymmcore_eda._logger import logger
 
