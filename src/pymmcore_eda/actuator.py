@@ -8,8 +8,6 @@ from useq import MDAEvent, Channel
 import numpy as np
 
 from src.pymmcore_eda._logger import logger
-from smart_scan.custom_engine import CustomKeyes, GalvoParams
-from smart_scan.helpers.function_helpers import ScanningStragies
 
 if TYPE_CHECKING:
     from event_hub import EventHub
