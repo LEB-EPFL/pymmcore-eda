@@ -5,12 +5,16 @@ from threading import Timer
 from typing import TYPE_CHECKING
 import numpy as np
 
-from src.pymmcore_eda.time_machine import TimeMachine
+from pymmcore_eda.time_machine import TimeMachine
+from pymmcore_eda._event_queue import DynamicEventQueue
+from useq import MDAEvent
+from pymmcore_eda._eda_event import EDAEvent
+from pymmcore_eda._eda_sequence import EDASequence
 
-import time
 
 if TYPE_CHECKING:
     from useq import MDAEvent
+    from pymmcore_eda._eda_event import EDAEvent
 
 
 class QueueManager:
@@ -19,16 +23,20 @@ class QueueManager:
     Closer description in structure.md.
     """
 
-    def __init__(self, time_machine: TimeMachine | None = None):
-        self.q: Queue = Queue()
+    def __init__(self, time_machine: TimeMachine | None = None, eda_sequence: EDASequence | None = None):
+        self.acq_queue: Queue = Queue()
         self.stop = object()
-        self.q_iterator = iter(self.q.get, self.stop)
+        self.acq_queue_iterator = iter(self.acq_queue.get, self.stop)
         self.time_machine = time_machine or TimeMachine()
-        self.event_register: dict = {}
         self.preemptive = 0.02
         self.t_idx = 0
+        self.warmup = 3
+        self.next_time = None
+        self.event_queue = DynamicEventQueue()
 
+        self.eda_sequence = eda_sequence
         self._axis_max: dict[str, int] = {}
+        self.timer = Timer(0, self.queue_next_event)
         # self.axis_order = 'tpgcz' we might need this
 
     def register_actuator(self, actuator, n_channels: int = 1):
@@ -36,118 +44,74 @@ class QueueManager:
         self._axis_max['c'] = self._axis_max.get('c', 0) + n_channels
         return list(range(self._axis_max['c']-n_channels, self._axis_max['c']))
 
-    def register_event(self, event):
+    def register_event(self, event: MDAEvent|EDAEvent):
         """Actuators call this to request an event to be put on the event_register."""
-        
-        # Offset index
-        if event.index.get("t", 0) < 0:
-            keys = list(self.event_register.keys())
-            keys = sorted(keys)
-            if len(keys) == 0:
-                start = 0
-            elif abs(event.index.get("t", 0)) > len(keys):
-                start = keys[-1]
-            else:
-                start = keys[abs(event.index.get("t", 0))-1]
-            
-            event = event.replace(min_start_time=start)
+        if isinstance(event, MDAEvent):
+            event = EDAEvent().from_mda_event(event, self.eda_sequence)
+        if self.eda_sequence and event.sequence is None:
+            event.sequence = self.eda_sequence
 
         # Offset time
-        if event.min_start_time < 0:
+        if event.min_start_time and event.min_start_time < 0.0:
             start = self.time_machine.event_seconds_elapsed() + abs(
                 event.min_start_time
             )
-            event = event.replace(min_start_time=start)
+            event.min_start_time = start
 
-        if event.index.get("c", 0) != 0:
-            if len(self.event_register) != 0:
-                events = self.event_register[event.min_start_time]["events"].copy()
-                for i, event_i in enumerate(events):
-                    if event_i.index.get('c',0) == event.index.get('c',0):
-                        del self.event_register[event.min_start_time]['events'][i]
-                        
-                        # if smart scan event, perfom logical or between masks masks:
-                        try:
-                            copied_map = event_i.metadata.get('0',0)[0]
-                            current_map = event.metadata.get('0',0)[0]
-                            new_map = np.logical_or(copied_map, current_map)
-                            new_metadata = event.metadata.copy()
-                            new_metadata['0'][0] = new_map
-                            event = event.replace(metadata=new_metadata)
-                        except:
-                            pass
+        # Add warmup time
+        if event.min_start_time:
+            event.min_start_time += self.warmup
+        else:
+            event.min_start_time = self.warmup
+
+        # Handle frap maps
+        if event.metadata:
+            if event.metadata.get('0',0)[0] is not None:
+                events = self.event_queue.get_events_at_time(event.min_start_time)
+                for other_event in events:
+                    if other_event.metadata.get('0',0)[0] is not None:
+                        event.metadata['0'][0] = np.logical_or(
+                            event.metadata['0'][0], other_event.metadata['0'][0]
+                        )
+                        self.event_queue._events.remove(other_event)
+
         
-        if event.min_start_time not in self.event_register.keys():
-            self.event_register[event.min_start_time] = {"timer": None, "events": []}
+        self.event_queue.add(event)
+        self._reset_timer()
+        # for k, v in event.index.items():
+        #     self._axis_max[k] = max(self._axis_max.get(k, 0), v)
 
-        self.event_register[event.min_start_time]["events"].append(event)
-        if self.event_register[event.min_start_time]["timer"] is None:
-            self._set_timer_for_event(event)
+    def queue_next_event(self):
+        """Queue the next event."""
+        eda_event = self.event_queue.get_next()
+        if not eda_event:
+            self.stop_seq()
+            return
+        event = MDAEvent(**eda_event.model_dump())
+        self.acq_queue.put(event)
+        self._reset_timer()
 
-        for k, v in event.index.items():
-            self._axis_max[k] = max(self._axis_max.get(k, 0), v)
-
-    def queue_events(self, start_time: float):
-        """Put events on the queue that are due to be acquired.
-
-        Just before the actual acquisition time, put the event on the queue
-        that exposes them to the pymmcore-plus runner.
-        """
-        events = self.event_register[start_time]["events"].copy()
-        events = sorted(events, key=lambda event: (event.index.get("c", 100)))
-        for idx, event in enumerate(events):
-            new_index = event.index.copy()
-            new_index["t"] = self.t_idx
-            event = event.replace(index=new_index)
-            self.q.put(event)
-
-            # If this event reset the event_timer in the Runner, we have to reset the
-            # time_machine and update the timers for all queued events.
-            if event.reset_event_timer and idx == 0:  # idx > 0 gets more complicated
-                self.time_machine.consume_event(event)
-                old_items = list(self.event_register.items())
-                for key, value in old_items:
-                    if key == start_time:
-                        continue
-                    self._set_timer_for_event(value["events"][0])
-
-        self.t_idx += 1
-        del self.event_register[start_time]
 
     def stop_seq(self):
         """Stop the sequence after the events currently on the queue."""
-        self.q.put(self.stop)
+        self.acq_queue.put(self.stop)
 
     def empty_queue(self):
         """Empty the queue."""
         i = 0
-        while not self.q.empty():
-            self.q.get(False)
+        while not self.acq_queue.empty():
+            self.acq_queue.get(False)
             i+=1
         print(f"Emptied the queue of {i} events.")
 
-    def _set_timer_for_event(self, event: MDAEvent):
+    def _reset_timer(self):
         """Set or reset the timer for an event."""
-        
         #If we are the time 0 event and we reset, wait for potential other events to be queued
-        if all([event.min_start_time == 0,
-               event.reset_event_timer,
-               self.event_register[event.min_start_time]["timer"] is None]): 
-            self.event_register[event.min_start_time]["timer"] = False
-            Timer(0.005, self._set_timer_for_event, args=[event]).start()
+        self.timer.cancel()
+        if len(self.event_queue._events) == 0:
             return
-        if self.event_register[event.min_start_time]["timer"]:
-            self.event_register[event.min_start_time]["timer"].cancel()
-        if event.min_start_time:
-            time_until_start = (
-                event.min_start_time
-                - self.time_machine.event_seconds_elapsed()
-                - self.preemptive
-            )
-        else:
-            time_until_start = -1
-        time_until_start = max(0, time_until_start)
-        self.event_register[event.min_start_time]["timer"] = Timer(
-            time_until_start, self.queue_events, args=[event.min_start_time]
-        )
-        self.event_register[event.min_start_time]["timer"].start()
+        self.time_machine.consume_event(self.event_queue._events[0])
+        start_time = self.event_queue._events[0].min_start_time
+        relative_time =  start_time - self.time_machine.event_seconds_elapsed() - self.preemptive
+        self.timer = Timer(max(relative_time, 0.0), self.queue_next_event)
+        self.timer.start()

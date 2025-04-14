@@ -19,6 +19,7 @@ def test_mda():
     mmc.setDeviceAdapterSearchPaths(
         [
             "C:/Program Files/Micro-Manager-2.0/",
+            "/opt/micro-manager/lib/micro-manager",
             *list(mmc.getDeviceAdapterSearchPaths()),
         ]
     )
@@ -32,16 +33,15 @@ def test_mda():
         time_plan={"interval": 0.1, "loops": 3},
     )
     base_actuator = MDAActuator(queue_manager, mda_sequence)
-    base_actuator.wait = False
     
     loc = Path(__file__).parent / "test_data/test.ome.zarr"
     writer = AdaptiveWriter(path=loc, delete_existing=True)
 
-    mmc.run_mda(queue_manager.q_iterator, output=writer)
+    mmc.run_mda(queue_manager.acq_queue_iterator, output=writer)
     base_actuator.thread.start()
-    time.sleep(1)
+    base_actuator.thread.join()
     queue_manager.stop_seq()
-    time.sleep(1)
+    time.sleep(3)
     zarr_store = ts.open({
         "driver": "zarr",
         "kvstore": {
@@ -52,7 +52,7 @@ def test_mda():
 
     # Access data
     data = zarr_store.read().result()
-    assert data.shape == (3, 1, 512, 512)
+    assert data.shape == (1, 3, 512, 512)
 
     shutil.rmtree(loc)
     print('removed', loc)

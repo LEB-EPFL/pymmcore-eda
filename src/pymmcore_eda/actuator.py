@@ -7,7 +7,9 @@ from typing import TYPE_CHECKING
 from useq import MDAEvent, Channel
 import numpy as np
 
-from src.pymmcore_eda._logger import logger
+
+from pymmcore_eda._logger import logger
+
 
 if TYPE_CHECKING:
     from event_hub import EventHub
@@ -30,11 +32,11 @@ class MDAActuator:
     def _run(self):
         # Adjust the channels to the ones supposed to be pushed to
         for event in self.mda_sequence:
-            new_index = event.index.copy()
-            new_index["c"] = self.channels[event.index.get("c", 0)]
-            event = event.replace(index=new_index)
-            if event.reset_event_timer and new_index.get('c', 0) > 0:
-                event = event.replace(reset_event_timer=False)
+            # new_index = event.index.copy()
+            # new_index["c"] = self.channels[event.index.get("c", 0)]
+            # event = event.replace(index=new_index)
+            if event.reset_event_timer:
+                 event = event.replace(reset_event_timer=False)
             self.queue_manager.register_event(event)
         if self.wait:
             time.sleep(event.min_start_time + 3)

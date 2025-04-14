@@ -25,7 +25,8 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-    "pymmcore_plus >= 0.12"
+    "pymmcore-plus",
+    "sortedcontainers>=2.4.0",
 ]
 
 [project.optional-dependencies]
@@ -35,14 +36,18 @@ Source = "https://github.com/LEB-EPFL/pymmcore-eda"
 Tracker = "https://github.com/LEB-EPFL/pymmcore-eda/issues"
 Documentation = "https://LEB-EPFL.github.io/pymmcore-eda"
 
+[tool.setuptools]
+packages = {find = {where = ["src"]}}
+
 [tool.pytest.ini_options]
 log_cli = true
 log_cli_level = "INFO"
+pythonpath = ["src"]
 
 # https://beta.ruff.rs/docs/rules/
 [tool.ruff]
 line-length = 88
-target-version = "py39"
+target-version = "py312"
 
 [tool.ruff.lint]
 pydocstyle = { convention = "numpy" }
