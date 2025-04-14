@@ -6,8 +6,6 @@ import shutil
 import os
 import json
 
-from smart_scan.custom_engine import CustomKeyes, GalvoParams
-
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
