@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from useq import MDAEvent
 
-from src.pymmcore_eda._logger import logger
+from pymmcore_eda._logger import logger
 
 if TYPE_CHECKING:
     from typing import Any
@@ -97,7 +97,7 @@ def emit_writer_signal(
     hub.new_writer_frame.emit(output_save, fake_event, meta)
 
 
-class Dummy_Analyser:
+class Analyser:
     """Analyse the image and produce a map for the interpreter."""
 
     def __init__(self, hub: EventHub, prediction_time: float = 0.2):
@@ -151,7 +151,7 @@ def dummy_predict(
     t = event.index.get("t", 0)
     logger.info(
         f"Dummy prediction finished for event t = {t}. Duration = {elapsed} ms."
-        "Max value: {np.max(output):.2f}"
+        f" Max value: {np.max(output):.2f}"
     )
 
     # Emit the event score

@@ -26,9 +26,10 @@ class EventHub(SignalGroup):
     new_interpretation = Signal(np.ndarray, MDAEvent, dict)
     new_writer_frame = Signal(np.ndarray, MDAEvent, dict)
 
-    def __init__(self, runner: MDARunner, writer: AdaptiveWriter) -> None:
+    def __init__(self, runner: MDARunner, writer: AdaptiveWriter | None = None) -> None:
         self.runner = runner
         self.runner.events.frameReady.connect(self.frameReady.emit)
 
         self.writer = writer
-        self.new_writer_frame.connect(self.writer.frameReady)
+        if self.writer:
+            self.new_writer_frame.connect(self.writer.frameReady)

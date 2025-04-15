@@ -145,7 +145,6 @@ class EDAEvent(MutableModel):
                     return self_val < other_val
                 # For numeric comparisons (time, position index, z, channel index)
                 try:
-                    print(dim, self, other, self_val, other_val)
                     return float(self_val) < float(other_val)
                 except ValueError:
                     # One of the items could not be indexed, it will go later

@@ -1,11 +1,12 @@
+import threading
 from collections import defaultdict
-from typing import cast
 
 from sortedcontainers import SortedSet
 from useq import Channel
 
 from pymmcore_eda._eda_event import EDAEvent
 from pymmcore_eda._eda_sequence import EDASequence
+from pymmcore_eda._logger import logger
 
 
 class DynamicEventQueue:
@@ -29,29 +30,37 @@ class DynamicEventQueue:
         self._events_by_time: dict[float, list[EDAEvent]] = defaultdict(list)
         self._t_index = 0  # Sequential index counter
         self.sequence = None
+        self._lock = threading.Lock()
 
     def add(self, event: EDAEvent) -> None:
         """Add an event to the queue, resolving any dimension indices in the event."""
-        if event.sequence and not self.sequence:
-            self._apply_sequence(event.sequence)
-        if event.attach_index:
-            self._apply_dimension_indices(event)
+        with self._lock:
+            if event.sequence and not self.sequence:
+                self._apply_sequence(event.sequence)
+            if event.attach_index:
+                self._apply_dimension_indices(event)
+            self._events.add(event)
+            self._update_unique_sets(event)
 
-        print("ADDING", event)
-        self._events.add(event)
-        self._update_unique_sets(event)
-
-        if event.min_start_time is not None:
-            self._events_by_time[event.min_start_time].append(event)
+            if (
+                event.min_start_time is not None
+                and event not in self._events_by_time[event.min_start_time]
+            ):
+                self._events_by_time[event.min_start_time].append(event)
+            else:
+                logger.info("Event rejected, already in queue")
 
     def remove(self, event: EDAEvent) -> None:
         """Remove an event from the queue."""
-        if event in self._events:
-            self._events.remove(event)
+        with self._lock:
+            if event in self._events:
+                self._events.remove(event)
             if event.min_start_time is not None:
                 self._events_by_time[event.min_start_time].remove(event)
-                if not self._events_by_time[event.min_start_time]:
+                if len(self._events_by_time[event.min_start_time]) == 0:
                     del self._events_by_time[event.min_start_time]
+                    self._unique_indexes["t"].remove(event.min_start_time)
+                    self._t_index += 1
 
     def _apply_sequence(self, sequence: EDASequence) -> None:
         """Apply the sequence to the event queue."""
@@ -75,7 +84,6 @@ class DynamicEventQueue:
             value = self.get_value_at_index(dim, index)
             if value is not None:
                 if dim == "t":
-                    print("Getting index from", index, self._unique_indexes["t"])
                     event.min_start_time = value
                 elif dim == "c":
                     event.channel = Channel(config=value)
@@ -108,6 +116,7 @@ class DynamicEventQueue:
         event = self._events.pop(0)
         # Generate and assign integer indexes before returning the event
         event = self._assign_integer_indexes(event)
+        self.remove(event)
         return event
 
     def peak_next(self) -> EDAEvent | None:
@@ -151,9 +160,8 @@ class DynamicEventQueue:
 
         # Assign time index if available
         if event.min_start_time is not None:
-            grid_index = self._get_index_of_value("t", event.min_start_time)
-            if grid_index is not None:
-                index["t"] = grid_index
+            time_index = self._t_index
+            index["t"] = time_index
 
         # Attach the index to the event
         event.index = index
@@ -168,12 +176,12 @@ class DynamicEventQueue:
             return self._channels.index(value)
         return None
 
-    def get_value_at_index(self, dim: str, index: int) -> int | str | None:
+    def get_value_at_index(self, dim: str, index: int) -> int | str | None | float:
         """Get the value at a specific index for a dimension."""
-        if dim in self._unique_indexes:
+        if dim in self._unique_indexes.keys():
             values = self._unique_indexes[dim]
-            if 0 <= index < len(values):
-                return cast("int", list(values)[index])
+            if index < len(values):
+                return list(values)[index]  # type: ignore
         elif dim == "c":
             return self._channels[index] if 0 <= index < len(self._channels) else None
         return None

@@ -12,13 +12,13 @@ if TYPE_CHECKING:
 class InterpreterSettings:
     """Settings for the Interpreter."""
 
-    threshold: float = 0.8
+    threshold: float = 1
 
 
-class Interpreter_widefield:
+class Interpreter:
     """Get event score and produce a binary image that informs the actuator."""
 
-    def __init__(self, hub: EventHub, smart_event_period: int = 0):
+    def __init__(self, hub: EventHub, smart_event_period: int = 5):
         self.hub = hub
         self.hub.new_analysis.connect(self._interpret)
         self.smart_event_period = smart_event_period

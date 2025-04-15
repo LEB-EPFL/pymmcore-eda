@@ -78,7 +78,6 @@ class QueueManager:
                             event.metadata["0"][0], other_event.metadata["0"][0]
                         )
                         self.event_queue.remove(other_event)
-
         self.event_queue.add(event)
         self._reset_timer()
         # for k, v in event.index.items():
@@ -104,7 +103,6 @@ class QueueManager:
         while not self.acq_queue.empty():
             self.acq_queue.get(False)
             i += 1
-        print(f"Emptied the queue of {i} events.")
 
     def _reset_timer(self) -> None:
         """Set or reset the timer for an event."""
