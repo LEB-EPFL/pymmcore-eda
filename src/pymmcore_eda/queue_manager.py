@@ -4,7 +4,6 @@ from queue import Queue
 from threading import Timer
 from typing import TYPE_CHECKING
 
-import numpy as np
 from useq import MDAEvent
 
 from pymmcore_eda._eda_event import EDAEvent
@@ -48,40 +47,25 @@ class QueueManager:
         self._axis_max["c"] = self._axis_max.get("c", 0) + n_channels
         return list(range(self._axis_max["c"] - n_channels, self._axis_max["c"]))
 
-    def register_event(self, event: MDAEvent | EDAEvent) -> None:
-        """Actuators call this to request an event to be put on the event_register."""
+    def prepare_event(self, event: MDAEvent | EDAEvent) -> EDAEvent:
+        """Prepare an event for the queue."""
         if isinstance(event, MDAEvent):
             event = EDAEvent().from_mda_event(event, self.eda_sequence)
         if self.eda_sequence and event.sequence is None:
             event.sequence = self.eda_sequence
-
         # Offset time
         if event.min_start_time and event.min_start_time < 0.0:
             start = self.time_machine.event_seconds_elapsed() + abs(
                 event.min_start_time
             )
             event.min_start_time = start
+        return event
 
-        # Add warmup time
-        if event.min_start_time:
-            event.min_start_time += self.warmup
-        else:
-            event.min_start_time = self.warmup
-
-        # Handle frap maps
-        if event.metadata:
-            if event.metadata.get("0", 0)[0] is not None:
-                events = self.event_queue.get_events_at_time(event.min_start_time)
-                for other_event in events:
-                    if other_event.metadata.get("0", 0)[0] is not None:
-                        event.metadata["0"][0] = np.logical_or(
-                            event.metadata["0"][0], other_event.metadata["0"][0]
-                        )
-                        self.event_queue.remove(other_event)
+    def register_event(self, event: MDAEvent | EDAEvent) -> None:
+        """Actuators call this to request an event to be put on the event_register."""
+        event = self.prepare_event(event)
         self.event_queue.add(event)
         self._reset_timer()
-        # for k, v in event.index.items():
-        #     self._axis_max[k] = max(self._axis_max.get(k, 0), v)
 
     def queue_next_event(self) -> None:
         """Queue the next event."""
