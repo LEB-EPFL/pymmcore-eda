@@ -33,7 +33,7 @@ def test_mda():
 
     loc = Path(__file__).parent / "test_data/test.ome.zarr"
     writer = AdaptiveWriter(path=loc, delete_existing=True)
-    writer.reshape_on_finished = False
+    writer.reshape_on_finished = True
 
     EventHub(mmc.mda, writer)
     queue_manager = QueueManager()
@@ -64,7 +64,7 @@ def test_mda():
     # Access data
     data = zarr_store.read().result()
     print(data.shape)
-    assert data.shape == (5, 512, 512)
+    assert data.shape == (1, 5, 512, 512)
 
     shutil.rmtree(loc)
     print("removed", loc)

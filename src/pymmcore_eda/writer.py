@@ -1,26 +1,31 @@
 from __future__ import annotations
-from pymmcore_plus.mda.handlers import TensorStoreHandler
-import useq
 
-import shutil
 import os
-import json
-
+import shutil
 from typing import TYPE_CHECKING
+
+from pymmcore_plus.mda.handlers import TensorStoreHandler
 
 if TYPE_CHECKING:
     from typing import Literal, TypeAlias
+
+    import useq
+    from useq import MDASequence
+
     TsDriver: TypeAlias = Literal["zarr", "zarr3", "n5", "neuroglancer_precomputed"]
-    from os import PathLike
     from collections.abc import Mapping
-    import tensorstore as ts
+    from os import PathLike
+
     import numpy as np
+    import tensorstore as ts
     from useq import FrameMetaV1
 
 FRAME_DIM = "frame"
 
+
 class AdaptiveWriter(TensorStoreHandler):
     """A Tensorstorehandler that is optimized for adaptive acquisitions."""
+
     def __init__(
         self,
         *,
@@ -30,21 +35,29 @@ class AdaptiveWriter(TensorStoreHandler):
         delete_existing: bool = False,
         spec: Mapping | None = None,
     ) -> None:
-        super().__init__(driver=driver, kvstore=kvstore, path=path, delete_existing=delete_existing, spec=spec)
+        super().__init__(
+            driver=driver,
+            kvstore=kvstore,
+            path=path,
+            delete_existing=delete_existing,
+            spec=spec,
+        )
         # So we are flexible with what events are coming in
         self._nd_storage = False
         self.reshape_on_finished: bool = True
 
     def sequenceFinished(self, seq: useq.MDASequence) -> None:
+        """Clean up additionally, if self.reshape_on_finished is set."""
         super().sequenceFinished(seq)
         if not self._nd_storage and self.reshape_on_finished:
-                self._reshape_store()
-                shutil.rmtree(self._store.spec().kvstore.path, ignore_errors=True)
-                self._store = self._res_store
+            self._reshape_store()
+            shutil.rmtree(self._store.spec().kvstore.path, ignore_errors=True)  # type: ignore
+            self._store = self._res_store
 
     def new_store(
         self, frame: np.ndarray, seq: useq.MDASequence | None, meta: FrameMetaV1
     ) -> ts.Future[ts.TensorStore]:
+        """Create a new store for the sequence and given the frame shape."""
         shape, chunks, labels = self.get_shape_chunks_labels(frame.shape, seq)
         # self._nd_storage = FRAME_DIM not in labels
         return self._ts.open(
@@ -56,24 +69,30 @@ class AdaptiveWriter(TensorStoreHandler):
             chunk_layout=self._ts.ChunkLayout(chunk_shape=chunks),
             domain=self._ts.IndexDomain(labels=labels),
         )
-    
+
     def frameReady(
-            self, frame: np.ndarray, event: useq.MDAEvent, meta: FrameMetaV1
-        ) -> None:
-        if event.index.get("c", 0) == 1:
-            
-            # convert metadata to json for writing, only if event is smart scan 
-            try:
-                new_metadata = event.metadata.copy()
-                new_metadata['0'][0] = json.dumps({'0': event.metadata['0'][0].tolist()})
-                event = event.replace(metadata = new_metadata)
-                meta['mda_event'] = meta['mda_event'].replace(metadata = {})
-            except:
-                pass
+        self, frame: np.ndarray, event: useq.MDAEvent, meta: FrameMetaV1
+    ) -> None:
+        """Handle the frame ready event."""
+        # Would like to remove this and move it to smart_scan
+        # if event.index.get("c", 0) == 1:
+        #     # convert metadata to json for writing, only if event is smart scan
+        #     try:
+        #         new_metadata = event.metadata.copy()
+        #         new_metadata["0"][0] = json.dumps(
+        #             {"0": event.metadata["0"][0].tolist()}
+        #         )
+        #         event = event.replace(metadata=new_metadata)
+        #         meta["mda_event"] = meta["mda_event"].replace(metadata={})
+        #     except:
+        #         pass
 
         super().frameReady(frame, event, meta)
 
-    def get_shape_chunks_labels(self, frame_shape, seq):
+    def get_shape_chunks_labels(
+        self, frame_shape: tuple[int, ...], seq: MDASequence | None = None
+    ) -> tuple:
+        """Get the shape, chunks, and labels for the store."""
         if not self._nd_storage:
             return (
                 (self._size_increment, *frame_shape),
@@ -83,6 +102,7 @@ class AdaptiveWriter(TensorStoreHandler):
         return super().get_shape_chunks_labels(frame_shape, seq)
 
     def get_spec(self) -> dict:
+        """Get the spec for the store."""
         if self.reshape_on_finished and isinstance(self.kvstore, str):
             directory, filename = os.path.split(self.kvstore)
             base, *ext = filename.split(".")
@@ -109,7 +129,7 @@ class AdaptiveWriter(TensorStoreHandler):
             domain=self._ts.IndexDomain(labels=labels),
         ).result()
         for index, pos in self._frame_indices.items():
-            keys, values = zip(*dict(index).items())
+            keys, values = zip(*dict(index).items(), strict=False)
             put_index = self._ts.d[keys][values]
             self._futures.append(self._res_store[put_index].write(self._store[pos]))
         while self._futures:

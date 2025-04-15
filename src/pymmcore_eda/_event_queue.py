@@ -1,153 +1,188 @@
-from sortedcontainers import  SortedSet
 from collections import defaultdict
+from typing import cast
+
+from sortedcontainers import SortedSet
 from useq import Channel
 
+from pymmcore_eda._eda_event import EDAEvent
+from pymmcore_eda._eda_sequence import EDASequence
+
+
 class DynamicEventQueue:
-    """An event queue that tracks unique dimension values and allows indexing by ordinal position."""
-    
-    def __init__(self):
+    """An event queue for Dynamic acquisitions.
+
+    it tracks unique dimension values and allows indexing by ordinal position.
+    """
+
+    def __init__(self) -> None:
         self._events = SortedSet()
-        
-        self._unique_indexes = {
-            't': SortedSet(),
-            'c': tuple(),  
-            'z': SortedSet(),  
-            'p': SortedSet(),  
-            'g': SortedSet() 
+
+        self._unique_indexes: dict[str, SortedSet[int]] = {
+            "t": SortedSet(),
+            "z": SortedSet(),
+            "p": SortedSet(),
+            "g": SortedSet(),
         }
-        
-        self._events_by_time = defaultdict(list)
+        # Channels are special, as they are not integers
+        self._channels: tuple[str, ...] = ()
+
+        self._events_by_time: dict[float, list[EDAEvent]] = defaultdict(list)
         self._t_index = 0  # Sequential index counter
         self.sequence = None
-    
-    def add(self, event):
+
+    def add(self, event: EDAEvent) -> None:
         """Add an event to the queue, resolving any dimension indices in the event."""
         if event.sequence and not self.sequence:
             self._apply_sequence(event.sequence)
         if event.attach_index:
             self._apply_dimension_indices(event)
-        
+
         print("ADDING", event)
         self._events.add(event)
         self._update_unique_sets(event)
-        
+
         if event.min_start_time is not None:
             self._events_by_time[event.min_start_time].append(event)
-    
-    def _apply_sequence(self, sequence):
+
+    def remove(self, event: EDAEvent) -> None:
+        """Remove an event from the queue."""
+        if event in self._events:
+            self._events.remove(event)
+            if event.min_start_time is not None:
+                self._events_by_time[event.min_start_time].remove(event)
+                if not self._events_by_time[event.min_start_time]:
+                    del self._events_by_time[event.min_start_time]
+
+    def _apply_sequence(self, sequence: EDASequence) -> None:
         """Apply the sequence to the event queue."""
         self.sequence = sequence
         # Initialize unique indexes based on the sequence
-        if hasattr(sequence, 'channels'):
-            self._unique_indexes['c'] = tuple(c.config for c in sequence.channels)
-        if hasattr(sequence, 'z_positions'):
-            self._unique_indexes['z'] = SortedSet(sequence.z_positions)
-        if hasattr(sequence, 'positions'):
-            self._unique_indexes['p'] = SortedSet(sequence.positions)
-        if hasattr(sequence, 'grid_positions'):
-            self._unique_indexes['g'] = SortedSet(sequence.grid_positions)
+        if hasattr(sequence, "channels"):
+            self._channels = tuple(c.config for c in sequence.channels)
+        if hasattr(sequence, "z_positions"):
+            self._unique_indexes["z"] = SortedSet(sequence.z_positions)
+        if hasattr(sequence, "positions"):
+            self._unique_indexes["p"] = SortedSet(sequence.positions)
+        if hasattr(sequence, "grid_positions"):
+            self._unique_indexes["g"] = SortedSet(sequence.grid_positions)
 
-    def _apply_dimension_indices(self, event):
+    def _apply_dimension_indices(self, event: EDAEvent) -> EDAEvent:
         """Apply dimensional indices from event.attach_index to set actual values."""
         if not event.attach_index:
-            return
-            
+            return event
+
         for dim, index in event.attach_index.items():
             value = self.get_value_at_index(dim, index)
             if value is not None:
-                if dim == 't':
-                    print('Getting index from', index, self._unique_indexes['t'])
+                if dim == "t":
+                    print("Getting index from", index, self._unique_indexes["t"])
                     event.min_start_time = value
-                elif dim == 'c':
+                elif dim == "c":
                     event.channel = Channel(config=value)
-                elif dim == 'z':
+                elif dim == "z":
                     event.z_pos = value
-                elif dim == 'p':
+                elif dim == "p":
                     event.pos_index = value
-                elif dim == 'g':
+                elif dim == "g":
                     event.pos_name = value
-    
-    def _update_unique_sets(self, event):
+        return event
+
+    def _update_unique_sets(self, event: EDAEvent) -> None:
         """Update the unique value sets with values from this event."""
         if event.min_start_time is not None:
-            self._unique_indexes['t'].add(event.min_start_time)
-        if event.channel and not (event.channel.config in self._unique_indexes['c']):
-            self._unique_indexes['c'] = self._unique_indexes['c'] + tuple([event.channel.config])
+            self._unique_indexes["t"].add(event.min_start_time)
+        if event.channel and event.channel.config not in self._channels:
+            self._channels = (*self._channels, event.channel.config)
         if event.z_pos is not None:
-            self._unique_indexes['z'].add(event.z_pos)
+            self._unique_indexes["z"].add(event.z_pos)
         if event.pos_index is not None:
-            self._unique_indexes['p'].add(event.pos_index)
+            self._unique_indexes["p"].add(event.pos_index)
         if event.pos_name is not None:
-            self._unique_indexes['g'].add(event.pos_name)
-    
-    def get_next(self):
+            self._unique_indexes["g"].add(event.pos_name)
+
+    def get_next(self) -> EDAEvent | None:
         """Get the next event from the queue (first in order)."""
         if len(self._events) == 0:
             return None
-        
+
         event = self._events.pop(0)
         # Generate and assign integer indexes before returning the event
-        event = self._assign_integer_indexes(event)       
+        event = self._assign_integer_indexes(event)
         return event
-    
-    def _assign_integer_indexes(self, event):
+
+    def peak_next(self) -> EDAEvent | None:
+        """Peek at the next event in the queue without removing it."""
+        if len(self._events) == 0:
+            return None
+
+        event = self._events[0]
+        # Generate and assign integer indexes before returning the event
+        event = self._assign_integer_indexes(event)
+        return event
+
+    def _assign_integer_indexes(self, event: EDAEvent) -> EDAEvent:
         """Assign integer indexes to the event based on its dimension values."""
         index = {}
-        
+
         # Assign channel index if available
-        if event.channel is not None and hasattr(event.channel, 'config'):
+        if event.channel is not None and hasattr(event.channel, "config"):
             channel_value = event.channel.config
-            channel_index = self._get_index_of_value('c', channel_value)
+            channel_index = self._get_index_of_value("c", channel_value)
             if channel_index is not None:
-                index['c'] = channel_index
-        
+                index["c"] = channel_index
+
         # Assign z-position index if available
         if event.z_pos is not None:
-            z_index = self._get_index_of_value('z', event.z_pos)
+            z_index = self._get_index_of_value("z", event.z_pos)
             if z_index is not None:
-                index['z'] = z_index
-        
+                index["z"] = z_index
+
         # Assign position index if available
         if event.pos_index is not None:
-            pos_index = self._get_index_of_value('p', event.pos_index)
+            pos_index = self._get_index_of_value("p", event.pos_index)
             if pos_index is not None:
-                index['p'] = pos_index
-        
+                index["p"] = pos_index
+
         # Assign position name (grid) index if available
         if event.pos_name is not None:
-            grid_index = self._get_index_of_value('g', event.pos_name)
+            grid_index = self._get_index_of_value("g", event.pos_name)
             if grid_index is not None:
-                index['g'] = grid_index
-        
+                index["g"] = grid_index
+
         # Assign time index if available
         if event.min_start_time is not None:
-            grid_index = self._get_index_of_value('t', event.min_start_time)
+            grid_index = self._get_index_of_value("t", event.min_start_time)
             if grid_index is not None:
-                index['t'] = grid_index
-        
+                index["t"] = grid_index
+
         # Attach the index to the event
         event.index = index
         return event
-    
-    def _get_index_of_value(self, dim, value):
+
+    def _get_index_of_value(self, dim: str, value: float | str | Channel) -> int | None:
         """Get the integer index of a value in a dimension's unique set."""
         if dim in self._unique_indexes and value in self._unique_indexes[dim]:
             values_list = self._unique_indexes[dim]
-            return values_list.index(value)
+            return int(values_list.index(value))
+        elif dim == "c" and value in self._channels:
+            return self._channels.index(value)
         return None
-    
-    def get_value_at_index(self, dim, index):
+
+    def get_value_at_index(self, dim: str, index: int) -> int | str | None:
         """Get the value at a specific index for a dimension."""
         if dim in self._unique_indexes:
-            if 0 <= index < len(self._unique_indexes[dim]):
-                return list(self._unique_indexes[dim])[index]
+            values = self._unique_indexes[dim]
+            if 0 <= index < len(values):
+                return cast("int", list(values)[index])
+        elif dim == "c":
+            return self._channels[index] if 0 <= index < len(self._channels) else None
         return None
-    
-    def get_unique_values(self, dim):
+
+    def get_unique_values(self, dim: str) -> list[int] | tuple:
         """Get all unique values for a dimension."""
-        if dim == 'c':
-            return self._unique_indexes['c']
-        elif dim in self._unique_indexes:
+        if dim == "c":
+            return self._channels
+        elif dim in ("t", "z", "p", "g"):
             return list(self._unique_indexes[dim])
         else:
             return []
@@ -155,7 +190,7 @@ class DynamicEventQueue:
     def get_events_at_time(self, timestamp: float) -> list[EDAEvent]:
         """Get all events scheduled at a specific timestamp."""
         return self._events_by_time.get(timestamp, [])
-    
-    def __len__(self):
+
+    def __len__(self) -> int:
         """Get the number of events in the queue."""
         return len(self._events)

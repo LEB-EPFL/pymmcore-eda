@@ -24,7 +24,9 @@ class MockRunner:
             else:
                 acq_time = ""
             now = datetime.datetime.now()
-            total_time = f"{now.minute:02d}:{now.second:02d}.{now.microsecond//000:03d}"
+            total_time = (
+                f"{now.minute:02d}:{now.second:02d}.{now.microsecond//1000:03d}"
+            )
             print(f"{total_time}|{acq_time} |{event}")
             self.events.append(event)
             for k, v in event.index.items():
