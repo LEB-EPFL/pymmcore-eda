@@ -40,15 +40,16 @@ class DynamicEventQueue:
             if event.attach_index:
                 self._apply_dimension_indices(event)
             self._events.add(event)
-            self._update_unique_sets(event)
 
             if (
                 event.min_start_time is not None
                 and event not in self._events_by_time[event.min_start_time]
             ):
                 self._events_by_time[event.min_start_time].append(event)
+                self._update_unique_sets(event)
             else:
-                logger.info("Event rejected, already in queue")
+                logger.info(f"Event rejected, already in queue {event}")
+                logger.info(self._events_by_time[event.min_start_time])
 
     def remove(self, event: EDAEvent) -> None:
         """Remove an event from the queue."""

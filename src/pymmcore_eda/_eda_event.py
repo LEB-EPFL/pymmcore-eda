@@ -39,9 +39,7 @@ class EDAEvent(MutableModel):
     z_pos: float | None = None
     pos_index: int | None = None  # Position index for ordering
     slm_image: SLMImage | None = None
-    sequence: Union["EDASequence", "MDASequence"] | None = Field(
-        default=None, repr=False
-    )
+    sequence: Union["EDASequence", "MDASequence"] | None = None
     properties: list[PropertyTuple] | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
     action: AnyAction = Field(default_factory=AcquireImage, discriminator="type")
@@ -59,18 +57,7 @@ class EDAEvent(MutableModel):
         _sz = field_serializer("z_pos", mode="plain")(_float_or_none)
 
     def _get_dimension_value(self, dim: str) -> float | str | int | None:
-        """Get the value for a specific dimension.
-
-        Parameters
-        ----------
-        dim : str
-            One character from the axis_order tuple ('t', 'p', 'g', 'c', 'z')
-
-        Returns
-        -------
-        Union[float, str, int, None]
-            The value for the dimension, or None if not applicable
-        """
+        """Get the value for a specific dimension."""
         if dim == "t":
             return self.min_start_time
         elif dim == "c":
@@ -202,14 +189,15 @@ class EDAEvent(MutableModel):
         for dim in axis_order:
             self_val = self._get_dimension_value(dim)
             other_val = other._get_dimension_value(dim)
-
             # If values differ, events are not equal
             if self_val != other_val:
                 return False
 
         # All dimensions are equal, additional attributes check
         return (
-            self.exposure == other.exposure
+            self.channel == other.channel
+            and self.min_start_time == other.min_start_time
+            and self.exposure == other.exposure
             and self.properties == other.properties
             and self.action == other.action
             and self.keep_shutter_open == other.keep_shutter_open
@@ -279,11 +267,10 @@ class EDAEvent(MutableModel):
         for key, value in mda_event.model_dump().items():
             if key == "index":
                 continue
-            if key == "sequence" and value and eda_sequence:
+            if key == "sequence" and eda_sequence:
                 setattr(self, key, eda_sequence)
                 continue
-            if key == "sequence" and value:
-                setattr(self, key, MDASequence(**value))
+            elif key == "sequence":
                 continue
 
             setattr(self, key, value)

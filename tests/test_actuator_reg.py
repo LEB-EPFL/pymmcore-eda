@@ -40,13 +40,13 @@ def test_actuator_reg():
 
     runner = MockRunner()
 
-    base_actuator2.thread.start()
-    time.sleep(1)
     base_actuator.thread.start()
+    time.sleep(1)
+    base_actuator2.thread.start()
     time.sleep(1)
     # mmc.run_mda(queue_manager.q_iterator)
     runner.run(queue_manager.acq_queue_iterator)
-    time.sleep(5)
+    time.sleep(7)
     queue_manager.stop_seq()
     time.sleep(1)
     assert len(runner.events) == 6

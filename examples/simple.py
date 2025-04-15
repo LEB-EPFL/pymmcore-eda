@@ -1,0 +1,46 @@
+import time
+
+from pymmcore_plus import CMMCorePlus
+from useq import MDASequence
+
+from pymmcore_eda._eda_sequence import EDASequence
+from pymmcore_eda.actuator import MDAActuator
+from pymmcore_eda.queue_manager import QueueManager
+
+mmc = CMMCorePlus()
+mmc.setDeviceAdapterSearchPaths(
+    [
+        "C:/Program Files/Micro-Manager-2.0/",
+        *list(mmc.getDeviceAdapterSearchPaths()),
+    ]
+)
+mmc.loadSystemConfiguration()
+mmc.mda.engine.use_hardware_sequencing = False
+
+eda_sequence = EDASequence()
+queue_manager = QueueManager(eda_sequence=eda_sequence)
+
+mda_sequence = MDASequence(
+    channels=["DAPI"],
+    time_plan={"interval": 1, "loops": 3},
+)
+base_actuator = MDAActuator(queue_manager, mda_sequence)
+base_actuator.wait = False
+
+mda_sequence2 = MDASequence(
+    channels=["Cy5"],
+    time_plan={"interval": 1, "loops": 3},
+)
+base_actuator2 = MDAActuator(queue_manager, mda_sequence2)
+base_actuator2.wait = False
+
+
+base_actuator2.thread.start()
+time.sleep(1)
+base_actuator.thread.start()
+time.sleep(1)
+
+mmc.run_mda(queue_manager.acq_queue_iterator)
+time.sleep(7)
+queue_manager.stop_seq()
+time.sleep(1)

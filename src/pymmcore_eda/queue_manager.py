@@ -59,6 +59,11 @@ class QueueManager:
                 event.min_start_time
             )
             event.min_start_time = start
+        # Add warmup time
+        if event.min_start_time:
+            event.min_start_time += self.warmup
+        else:
+            event.min_start_time = self.warmup
         return event
 
     def register_event(self, event: MDAEvent | EDAEvent) -> None:
