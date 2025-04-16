@@ -70,25 +70,6 @@ class AdaptiveWriter(TensorStoreHandler):
             domain=self._ts.IndexDomain(labels=labels),
         )
 
-    def frameReady(
-        self, frame: np.ndarray, event: useq.MDAEvent, meta: FrameMetaV1
-    ) -> None:
-        """Handle the frame ready event."""
-        # Would like to remove this and move it to smart_scan
-        # if event.index.get("c", 0) == 1:
-        #     # convert metadata to json for writing, only if event is smart scan
-        #     try:
-        #         new_metadata = event.metadata.copy()
-        #         new_metadata["0"][0] = json.dumps(
-        #             {"0": event.metadata["0"][0].tolist()}
-        #         )
-        #         event = event.replace(metadata=new_metadata)
-        #         meta["mda_event"] = meta["mda_event"].replace(metadata={})
-        #     except:
-        #         pass
-
-        super().frameReady(frame, event, meta)
-
     def get_shape_chunks_labels(
         self, frame_shape: tuple[int, ...], seq: MDASequence | None = None
     ) -> tuple:
@@ -132,8 +113,16 @@ class AdaptiveWriter(TensorStoreHandler):
             keys, values = zip(*dict(index).items(), strict=False)
             put_index = self._ts.d[keys][values]
             self._futures.append(self._res_store[put_index].write(self._store[pos]))
+        # Transfer metadata
+        if source := self._store.kvstore:
+            zattrs_bytes = source.read(".zattrs").result().value
+            dest = self._res_store.kvstore
+            self._futures.append(dest.write(".zattrs", zattrs_bytes))
+
         while self._futures:
             self._futures.pop().result()
+
+
 
     def _get_reshape_spec(self) -> dict:
         spec = self.get_spec()
