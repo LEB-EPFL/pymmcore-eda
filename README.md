@@ -1,7 +1,11 @@
 # pymmcore-eda
 Run dynamic acquisitions on the pymmcore-plus backend. The basic idea is, that independent actuators add acquisition events to a dynamic sequence that get ordered by their intrinsic properties. This allows for acquisitions where the sequence of events is not know a-priori.
 
-![Dynamic Acquisitions](./QueueManager.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./QueueManager-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="./QueueManager-light.png">
+  <img alt="Project Screenshot" src="./QueueManager-dark.png">
+</picture>
 
 # Main components
 ## QueueManager
