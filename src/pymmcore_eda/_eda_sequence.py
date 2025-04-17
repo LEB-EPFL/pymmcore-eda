@@ -1,7 +1,7 @@
 from typing import Any
 
 from pydantic import Field, field_validator
-from useq import Channel
+from useq import Channel, MDASequence
 from useq._base_model import MutableModel
 
 
@@ -114,3 +114,16 @@ class EDASequence(MutableModel):
             f"channels={len(self.channels)}, "
             f"axis_order={self.axis_order})"
         )
+
+    def from_mda_sequence(self, mda_sequence: MDASequence) -> "EDASequence":
+        """Create an EDASequence from a MDASequence."""
+        for key, value in mda_sequence.model_dump().items():
+            if key == "axis_order":
+                self.axis_order = tuple(value)
+            if key == "channel_group":
+                setattr(self, key, value)
+            if key == "channels":
+                print("CHANNELS", tuple(Channel(**c) for c in value))
+                self.channels = tuple(Channel(**c) for c in value)
+
+        return self

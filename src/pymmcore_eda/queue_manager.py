@@ -53,12 +53,13 @@ class QueueManager:
             event = EDAEvent().from_mda_event(event, self.eda_sequence)
         if self.eda_sequence and event.sequence is None:
             event.sequence = self.eda_sequence
-        # Offset time
+        # Offset time absolute
         if event.min_start_time and event.min_start_time < 0.0:
             start = self.time_machine.event_seconds_elapsed() + abs(
                 event.min_start_time
             )
             event.min_start_time = start
+
         # Add warmup time
         if event.min_start_time:
             event.min_start_time += self.warmup
