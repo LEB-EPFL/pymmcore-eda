@@ -1,6 +1,8 @@
 # pymmcore-eda
 Run dynamic acquisitions on the pymmcore-plus backend. The basic idea is, that independent actuators add acquisition events to a dynamic sequence that get ordered by their intrinsic properties. This allows for acquisitions where the sequence of events is not know a-priori.
 
+![Dynamic Acquisitions](./QueueManager.png)
+
 # Main components
 ## QueueManager
 Has a queue that can be passed to the pymmcore-plus MDAEngine to run acquisition events. Additionally a 'DynamicEventQueue' that contains a set of ordered Acquisition events (EDAEvents) that can be populated from independent 'actuators' that can be triggered in different ways to allow for dynamic, reactive, interactive and/or smart acquisitions. Also handles timing of the acquisition with a timer that triggers addition of events from the DynamicEventQueue to the queue for acquisition.
