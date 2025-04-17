@@ -122,8 +122,6 @@ class AdaptiveWriter(TensorStoreHandler):
         while self._futures:
             self._futures.pop().result()
 
-
-
     def _get_reshape_spec(self) -> dict:
         spec = self.get_spec()
         spec["kvstore"] = spec["kvstore"].replace("_tmp", "")
