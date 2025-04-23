@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 if TYPE_CHECKING:
-    from event_hub import EventHub
+    from pymmcore_eda.event_hub import EventHub
     from useq import MDAEvent
 
 
