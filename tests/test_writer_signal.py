@@ -9,15 +9,16 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 
 def test_mda():
-    from pymmcore_plus import CMMCorePlus
-    from useq import Channel, MDASequence
     from threading import Thread
 
+    from pymmcore_plus import CMMCorePlus
+    from useq import Channel, MDASequence
+
+    from pymmcore_eda._runner import DynamicRunner
     from pymmcore_eda.actuator import ButtonActuator, MDAActuator
     from pymmcore_eda.event_hub import EventHub
     from pymmcore_eda.queue_manager import QueueManager
     from pymmcore_eda.writer import AdaptiveWriter
-    from pymmcore_eda._runner import DynamicRunner
 
     mmc = CMMCorePlus()
     mmc.setDeviceAdapterSearchPaths(
@@ -54,7 +55,7 @@ def test_mda():
     mda_th = Thread(
         target=runner.run,
         args=(queue_manager.acq_queue_iterator,),
-        kwargs={"output": writer}
+        kwargs={"output": writer},
     )
     mda_th.start()
     base_actuator.thread.join()

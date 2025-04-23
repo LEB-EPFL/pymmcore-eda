@@ -6,9 +6,8 @@ from unittest.mock import patch
 os.environ["PYTEST_RUNNING"] = "1"
 from typing import TYPE_CHECKING, Any
 
-import pytest
-
 import pymmcore_plus
+import pytest
 from pymmcore_plus._logger import logger
 from pymmcore_plus.core.events import CMMCoreSignaler
 from pymmcore_plus.mda.events import MDASignaler
@@ -41,7 +40,7 @@ def core(request: Any) -> Iterator[pymmcore_plus.CMMCorePlus]:
     core.registerCallback(core._callback_relay)
     if not core.getDeviceAdapterSearchPaths():
         pytest.fail("To run tests, please install MM with `mmcore install`")
-    core.loadSystemConfiguration('/opt/micro-manager/MMConfig_demo.cfg')
+    core.loadSystemConfiguration("/opt/micro-manager/MMConfig_demo.cfg")
     yield core
     core.__del__()
 

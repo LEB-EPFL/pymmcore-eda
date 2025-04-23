@@ -47,7 +47,6 @@ def test_complex():
     event2 = EDAEvent(min_start_time=5, channel="DAPI")
     queue_manager.register_event(event2)
 
-
     event4 = EDAEvent(min_start_time=5.1, channel="Cy5")
     event5 = EDAEvent(min_start_time=5.2, channel="Cy5")
     event6 = EDAEvent(min_start_time=5.3, channel="Cy5")
@@ -166,7 +165,9 @@ def test_edge_cases():
     # Edge case 6: Rapid succession of events with distinct timestamps
     # Using different exposures to ensure uniqueness
     for i in range(10):
-        rapid_event = EDAEvent(min_start_time=3+0.01 * i, channel="Cy5", exposure=i + 1)
+        rapid_event = EDAEvent(
+            min_start_time=3 + 0.01 * i, channel="Cy5", exposure=i + 1
+        )
         queue_manager.register_event(rapid_event)
 
     # Wait for all events to be executed (base sequence + buffer time)

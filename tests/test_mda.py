@@ -2,26 +2,21 @@ from __future__ import annotations
 
 import time
 from queue import Queue
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import useq
-from useq import HardwareAutofocus, MDAEvent, MDASequence
-
 from pymmcore_plus import CMMCorePlus
 from pymmcore_plus.mda.events import MDASignaler
+from useq import MDAEvent, MDASequence
 
 from pymmcore_eda._runner import DynamicRunner
-
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
-    from pytest import LogCaptureFixture
     from pytestqt.qtbot import QtBot
-
-    from pymmcore_plus.mda import MDAEngine
 
 try:
     import pytestqt
@@ -108,19 +103,18 @@ def test_mda_iterable_of_events(
     frame_mock = Mock()
 
     runner = DynamicRunner()
-    runner.set_engine(core.mda.engine)    
+    runner.set_engine(core.mda.engine)
     runner.events.sequenceStarted.connect(start_mock)
     runner.events.frameReady.connect(frame_mock)
 
     with qtbot.waitSignal(runner.events.sequenceFinished):
         runner.run(seq)
 
-    # The signal emission from the Threads spun up by threading.Timer is not traced well.
+    # The signal emission from the Threads spun up by threading.Timer is not traced well
     qtbot.wait(100)
 
     assert start_mock.call_count == 1
     assert frame_mock.call_count == 2
-
 
 
 # Part of this not working might be because the core does not know about the runner?
@@ -145,8 +139,8 @@ def test_mda_iterable_of_events(
 
 #     core.setAutoShutter(True)
 #     runner = DynamicRunner()
-#     runner.set_engine(core.mda.engine)  
-    
+#     runner.set_engine(core.mda.engine)
+
 #     @runner.events.frameReady.connect
 #     def _on_frame(img: Any, event: MDAEvent) -> None:
 #         assert core.getShutterOpen() == event.keep_shutter_open
@@ -154,26 +148,26 @@ def test_mda_iterable_of_events(
 #         assert core.getAutoShutter() == (event.index["p"] == 0)
 
 #     runner.run(mda)
-    
 
-    # It should look like this:
-    # event,                                                   open, auto_shut
-    # index={'p': 0, 'z': 0},                                  False, True)
-    # index={'p': 1, 'z': 0, 't': 0}, keep_shutter_open=True), True, False)
-    # index={'p': 1, 'z': 0, 't': 1}, keep_shutter_open=True), True, False)
-    # index={'p': 1, 'z': 0, 't': 2},                          False, False)
-    # index={'p': 0, 'z': 1},                                  False, True)
-    # index={'p': 1, 'z': 1, 't': 0}, keep_shutter_open=True), True, False)
-    # index={'p': 1, 'z': 1, 't': 1}, keep_shutter_open=True), True, False)
-    # index={'p': 1, 'z': 1, 't': 2},                          False, False)
-    # index={'p': 0, 'z': 2},                                  False, True)
-    # index={'p': 1, 'z': 2, 't': 0}, keep_shutter_open=True), True, False)
-    # index={'p': 1, 'z': 2, 't': 1}, keep_shutter_open=True), True, False)
-    # index={'p': 1, 'z': 2, 't': 2},                          False, False)
-    # index={'p': 0, 'z': 3},                                  False, True)
-    # index={'p': 1, 'z': 3, 't': 0}, keep_shutter_open=True), True, False)
-    # index={'p': 1, 'z': 3, 't': 1}, keep_shutter_open=True), True, False)
-    # index={'p': 1, 'z': 3, 't': 2},                          False, False)
+
+# It should look like this:
+# event,                                                   open, auto_shut
+# index={'p': 0, 'z': 0},                                  False, True)
+# index={'p': 1, 'z': 0, 't': 0}, keep_shutter_open=True), True, False)
+# index={'p': 1, 'z': 0, 't': 1}, keep_shutter_open=True), True, False)
+# index={'p': 1, 'z': 0, 't': 2},                          False, False)
+# index={'p': 0, 'z': 1},                                  False, True)
+# index={'p': 1, 'z': 1, 't': 0}, keep_shutter_open=True), True, False)
+# index={'p': 1, 'z': 1, 't': 1}, keep_shutter_open=True), True, False)
+# index={'p': 1, 'z': 1, 't': 2},                          False, False)
+# index={'p': 0, 'z': 2},                                  False, True)
+# index={'p': 1, 'z': 2, 't': 0}, keep_shutter_open=True), True, False)
+# index={'p': 1, 'z': 2, 't': 1}, keep_shutter_open=True), True, False)
+# index={'p': 1, 'z': 2, 't': 2},                          False, False)
+# index={'p': 0, 'z': 3},                                  False, True)
+# index={'p': 1, 'z': 3, 't': 0}, keep_shutter_open=True), True, False)
+# index={'p': 1, 'z': 3, 't': 1}, keep_shutter_open=True), True, False)
+# index={'p': 1, 'z': 3, 't': 2},                          False, False)
 
 
 def test_engine_protocol(core: CMMCorePlus) -> None:
@@ -203,6 +197,7 @@ def test_engine_protocol(core: CMMCorePlus) -> None:
         def event_iterator(self, events: Iterable[MDAEvent]) -> Iterator[MDAEvent]:
             mock6(events)
             return iter(events)
+
     runner = DynamicRunner()
     runner.set_engine(MyEngine())
 
@@ -227,7 +222,7 @@ def test_runner_cancel(qtbot: QtBot) -> None:
     # https://github.com/pymmcore-plus/pymmcore-plus/pull/98
     # for what we're trying to avoid
     core = CMMCorePlus()
-    core.loadSystemConfiguration('/opt/micro-manager/MMConfig_demo.cfg')
+    core.loadSystemConfiguration("/opt/micro-manager/MMConfig_demo.cfg")
     runner = DynamicRunner()
     runner.set_engine(core.mda.engine)  # type: ignore
     runner.engine.use_hardware_sequencing = False
@@ -237,6 +232,7 @@ def test_runner_cancel(qtbot: QtBot) -> None:
     event1 = MDAEvent()
 
     from threading import Thread
+
     mda_th = Thread(target=runner.run, args=([event1, MDAEvent(min_start_time=10)],))
     mda_th.start()
     with qtbot.waitSignal(runner.events.sequenceCanceled):
@@ -255,7 +251,7 @@ def test_runner_pause(qtbot: QtBot) -> None:
     # https://github.com/pymmcore-plus/pymmcore-plus/pull/98
     # for what we're trying to avoid
     core = CMMCorePlus()
-    core.loadSystemConfiguration('/opt/micro-manager/MMConfig_demo.cfg')
+    core.loadSystemConfiguration("/opt/micro-manager/MMConfig_demo.cfg")
     runner = DynamicRunner()
     runner.set_engine(core.mda.engine)  # type: ignore
     runner.engine.use_hardware_sequencing = False
@@ -264,8 +260,11 @@ def test_runner_pause(qtbot: QtBot) -> None:
     runner.set_engine(engine)
 
     from threading import Thread
+
     with qtbot.waitSignal(runner.events.frameReady):
-        mda_th = Thread(target=runner.run, args=([MDAEvent(), MDAEvent(min_start_time=2)],))
+        mda_th = Thread(
+            target=runner.run, args=([MDAEvent(), MDAEvent(min_start_time=2)],)
+        )
         mda_th.start()
     engine.setup_event.assert_called_once()  # not twice
 
@@ -290,11 +289,15 @@ def test_reset_event_timer(core: CMMCorePlus) -> None:
         MDAEvent(min_start_time=0, reset_event_timer=True),
         MDAEvent(min_start_time=0.2),
         MDAEvent(min_start_time=0.4),
+        MDAEvent(min_start_time=0.6),
+        MDAEvent(min_start_time=0.8),
     ]
     meta: list[float] = []
     runner = DynamicRunner()
     runner.set_engine(core.mda.engine)  # type: ignore
-    runner.events.frameReady.connect(lambda f, e, m: meta.append(time.perf_counter()*1000))
+    runner.events.frameReady.connect(
+        lambda f, e, m: meta.append(time.perf_counter() * 1000)
+    )
     runner.run(seq)
 
     # ensure that the 5th event occurred at least 190ms after the 4th event
@@ -354,4 +357,3 @@ def test_custom_action(core: CMMCorePlus) -> None:
     runner = DynamicRunner()
     runner.set_engine(core.mda.engine)  # type: ignore
     runner.run([MDAEvent(action=useq.CustomAction())])
-

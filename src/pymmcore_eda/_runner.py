@@ -38,13 +38,15 @@ class DynamicRunner(MDARunner):
     def set_timer(self) -> None:
         """Set the timer for the next event."""
         if not self._peek_next_event() or self._check_canceled():
-            self.acquisition_timer.cancel()
+            if self.acquisition_timer:
+                self.acquisition_timer.cancel()
             self._acquisition_complete.set()
             return
-        
+
         if self.is_paused():
             self._paused_time += self._pause_interval  # fixme: be more precise
-            self.acquisition_timer.cancel()
+            if self.acquisition_timer:
+                self.acquisition_timer.cancel()
             Timer(self._pause_interval, self.set_timer).start()
             return
 

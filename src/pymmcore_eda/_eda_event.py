@@ -125,7 +125,7 @@ class EDAEvent(MutableModel):
         for dim in axis_order:
             self_val = self._get_dimension_value(dim)
             other_val = other._get_dimension_value(dim)
-            
+
             # Skip dimensions where both values are None
             if self_val is None and other_val is None:
                 continue

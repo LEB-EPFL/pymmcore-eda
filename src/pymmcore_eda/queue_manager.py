@@ -1,18 +1,16 @@
 from __future__ import annotations
 
-from queue import Queue
-from threading import Timer
 from typing import TYPE_CHECKING
 
 from useq import MDAEvent
 
 from pymmcore_eda._eda_event import EDAEvent
 from pymmcore_eda._event_queue import DynamicEventQueue
-from pymmcore_eda.time_machine import TimeMachine
 
 if TYPE_CHECKING:
     from pymmcore_eda._eda_sequence import EDASequence
     from pymmcore_eda.actuator import MDAActuator  # should be generalized
+    from pymmcore_eda.time_machine import TimeMachine
 
 
 class QueueManager:
@@ -37,7 +35,6 @@ class QueueManager:
         # self.time_machine = time_machine or TimeMachine()
         self.eda_sequence = eda_sequence
         self._axis_max: dict[str, int] = {}
-
 
     def register_actuator(
         self, actuator: MDAActuator, n_channels: int = 1
@@ -78,7 +75,6 @@ class QueueManager:
     def empty_queue(self) -> None:
         """Empty the queue."""
         i = 0
-        while not self.acq_queue.empty():
-            self.acq_queue.get(False)
+        while not self.event_queue.empty():
+            self.event_queue.get(False)
             i += 1
-

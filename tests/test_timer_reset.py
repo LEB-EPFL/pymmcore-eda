@@ -104,7 +104,3 @@ def test_reset_timer_eda():
             ), f"Expected time difference around 1.0, got {second_time_diff}"
 
     print("Reset event timer flag test passed!")
-
-
-if __name__ == "__main__":
-    test_reset_event_timer()

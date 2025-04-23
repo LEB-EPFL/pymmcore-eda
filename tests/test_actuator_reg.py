@@ -18,7 +18,7 @@ def test_actuator_reg():
             *list(mmc.getDeviceAdapterSearchPaths()),
         ]
     )
-    mmc.loadSystemConfiguration('MMConfig_demo.cfg')
+    mmc.loadSystemConfiguration("MMConfig_demo.cfg")
     mmc.mda.engine.use_hardware_sequencing = False
 
     eda_sequence = EDASequence(channels=("DAPI", "Cy5"))

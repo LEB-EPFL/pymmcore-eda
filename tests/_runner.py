@@ -1,13 +1,15 @@
 import datetime
-from threading import Thread
-from pymmcore_eda._eda_event import EDAEvent
 import time
+from threading import Thread
+
 
 class MockRunner:
-    def __init__(self, time_machine=None, stop=object()) -> None:
+    def __init__(self, time_machine=None, stop=None) -> None:
         self.events = []
         self._axis_max: dict[str, int] = {}
         self.time_machine = time_machine
+        if stop is None:
+            stop = object()
         self.stop = stop
 
     def run(self, events):
