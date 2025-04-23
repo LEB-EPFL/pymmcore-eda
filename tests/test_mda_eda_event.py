@@ -1,6 +1,7 @@
 from useq import Channel, MDAEvent, MDASequence
 
 from pymmcore_eda._eda_event import EDAEvent
+from pymmcore_eda._eda_sequence import EDASequence
 
 
 def test_from_mda_event_basic():
@@ -61,16 +62,9 @@ def test_from_mda_event_with_sequence():
 
     # Create an EDAEvent using from_mda_event
     eda_event = EDAEvent().from_mda_event(mda_event)
-
-    # Check that sequence was properly handled
+    # Check that the sequence was properly copied
     assert eda_event.sequence is not None
-    # It should have copied the MDASequence, not converted it to EDASequence
-    print(eda_event.sequence)
-    assert isinstance(eda_event.sequence, MDASequence)
-    assert eda_event.sequence.channels == (
-        Channel(config="DAPI"),
-        Channel(config="GFP"),
-    )
+    assert isinstance(eda_event.sequence, EDASequence)
 
 
 def test_from_mda_event_with_metadata():

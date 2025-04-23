@@ -1,5 +1,13 @@
 # pymmcore-eda
-Run dynamic acquisitions on the pymmcore-plus backend. The basic idea is, that independent actuators add acquisition events to a dynamic sequence that get ordered by their intrinsic properties. This allows for acquisitions where the sequence of events is not know a-priori.
+Run dynamic microscope acquisitions on the [pymmcore-plus](https://pymmcore-plus.github.io/pymmcore-plus/) backend. Instead of a predefined sequence of acquisitions, this allows for dynamic changes of the acquisition sequence to accommodate advanced experiments like seen for example in smart microscopy applications. Here, independent actuators add acquisition events to a set of events that get ordered by their intrinsic properties. This allows for acquisitions where the sequence of events is not know a-priori.
+
+# Dynamic Acquisitions
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./QueueManager-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="./QueueManager-light.png">
+  <img alt="Project Screenshot" src="./QueueManager-dark.png">
+</picture>
+
 
 # Main components
 ## QueueManager

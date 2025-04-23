@@ -39,6 +39,10 @@ class DynamicEventQueue:
                 self._apply_sequence(event.sequence)
             if event.attach_index:
                 self._apply_dimension_indices(event)
+            # Offset time relative
+            if event.start_time_offset:
+                event.min_start_time += event.start_time_offset
+
             self._events.add(event)
 
             if (

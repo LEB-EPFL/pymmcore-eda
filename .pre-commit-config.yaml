@@ -14,7 +14,7 @@ repos:
     rev: v0.6.9
     hooks:
       - id: ruff
-        args: [--fix, --unsafe-fixes]
+        args: [--fix, --unsafe-fixes,  --extend-select=E501]
       - id: ruff-format
 
   - repo: https://github.com/abravalheri/validate-pyproject

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Self, Union
+from typing import TYPE_CHECKING, Any, Self
 
 from pydantic import Field, field_validator
 from useq import Channel, MDAEvent, MDASequence, PropertyTuple, SLMImage
@@ -26,6 +26,23 @@ class EDAEvent(MutableModel):
     """Define a single event in a [`EDASequence`][EDASequence].
 
     A subset of properties of a useq.MDAEvent that are present before the scheduling.
+
+    New parameters:
+    attach_index: dict[str, int] | None = None
+        At the moment of addition to the SortedSet, the event will be 'attached' to the
+        event that has this preliminary index in the SortedSet (without already acquired
+        events). In contrast to the index that places the event on the absolute index.
+    min_start_time: float | None = None
+        This can now be negative. If so, the event will be offset by this amount from
+        the time of addition to the queue.
+    start_time_offset: float | None = None
+        This offset is applied after the event has been attached by the attach_index to
+        another event and has thus gotten the other event's min_start_time.
+    sequence: Union["EDASequence", "MDASequence"] | None = None
+        Can now also be a EDASequence. Mainly used for the axis_order and z_direction
+        properties.
+    pos_index: int | None = None
+        Easier to handle for ordering than pos_name.
     """
 
     index: dict[str, int] | None = None
@@ -33,13 +50,14 @@ class EDAEvent(MutableModel):
     channel: Channel | None = None
     exposure: float | None = Field(default=None, gt=0.0)
     min_start_time: float | None = None  # time in sec
-    pos_name: str | None = None
+    start_time_offset: float | None = None
     x_pos: float | None = None
     y_pos: float | None = None
     z_pos: float | None = None
     pos_index: int | None = None  # Position index for ordering
+    pos_name: str | None = None  # Position group name for ordering
     slm_image: SLMImage | None = None
-    sequence: Union["EDASequence", "MDASequence"] | None = None
+    sequence: EDASequence | MDASequence | None = None
     properties: list[PropertyTuple] | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
     action: AnyAction = Field(default_factory=AcquireImage, discriminator="type")
@@ -270,8 +288,12 @@ class EDAEvent(MutableModel):
             if key == "sequence" and eda_sequence:
                 setattr(self, key, eda_sequence)
                 continue
-            elif key == "sequence":
+            elif key == "sequence" and isinstance(value, dict):
+                try:
+                    setattr(self, key, EDASequence(**value))
+                except TypeError:
+                    mda_seq = MDASequence(**value)
+                    setattr(self, key, EDASequence().from_mda_sequence(mda_seq))
                 continue
-
             setattr(self, key, value)
         return self
