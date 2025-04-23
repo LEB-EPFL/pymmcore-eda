@@ -3,6 +3,7 @@ from __future__ import annotations
 from queue import Queue
 from threading import Timer
 from typing import TYPE_CHECKING
+import time
 
 from useq import MDAEvent
 
@@ -30,6 +31,7 @@ class QueueManager:
         self.stop = object()
         self.acq_queue_iterator = iter(self.acq_queue.get, self.stop)
         self.time_machine = time_machine or TimeMachine()
+
         self.preemptive = 0.02
         self.t_idx = 0
         self.warmup = 3
@@ -81,6 +83,7 @@ class QueueManager:
             return
         event = MDAEvent(**eda_event.model_dump())
         self.acq_queue.put(event)
+        time.sleep(self.preemptive)
         self._reset_timer()
 
     def stop_seq(self) -> None:
@@ -101,10 +104,21 @@ class QueueManager:
         self.timer.cancel()
         if len(self.event_queue) == 0:
             return
-        self.time_machine.consume_event(self.event_queue.peak_next())
-        start_time = self.event_queue.peak_next().min_start_time
-        relative_time = (
-            start_time - self.time_machine.event_seconds_elapsed() - self.preemptive
-        )
+        # self.time_machine.consume_event(self.event_queue.peak_next())
+        next_event = self.event_queue.peak_next()
+        start_time = next_event.min_start_time
+
+        if next_event.reset_event_timer:
+            if self.t_idx != 0:
+                relative_time = 0
+            else:
+                relative_time = start_time
+        else:
+            relative_time = (
+                start_time - self.time_machine.event_seconds_elapsed() - self.preemptive
+                - self.warmup
+            )
+        print("relative_time", relative_time)
+        print("event", next_event)
         self.timer = Timer(max(relative_time, 0.0), self.queue_next_event)
         self.timer.start()

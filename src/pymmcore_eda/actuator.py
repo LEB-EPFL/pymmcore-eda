@@ -31,7 +31,7 @@ class MDAActuator:
     def _run(self) -> None:
         for event in self.mda_sequence:
             eda_event = EDAEvent().from_mda_event(event)
-            eda_event.reset_event_timer = False
+            # eda_event.reset_event_timer = False
             self.queue_manager.register_event(eda_event)
         if self.wait:
             if event.min_start_time:

@@ -28,12 +28,10 @@ def test_reset_event_timer():
 
     # Create a sequence with multiple channels
     eda_sequence = EDASequence(channels=("DAPI", "Cy5"))
-    queue_manager = QueueManager(eda_sequence=eda_sequence)
+    queue_manager = QueueManager(time_machine=mmc.mda, eda_sequence=eda_sequence)
     runner = MockRunner(time_machine=queue_manager.time_machine)
+    
     runner.run(queue_manager.acq_queue_iterator)
-
-    # Wait for queue manager warmup
-    time.sleep(3)
 
     # Create and start a base sequence
     mda_sequence = MDASequence(
@@ -41,9 +39,10 @@ def test_reset_event_timer():
         time_plan={"interval": 1, "loops": 5},
     )
     base_actuator = MDAActuator(queue_manager, mda_sequence)
-    base_actuator.wait = False
+    base_actuator.wait = True
     base_actuator.thread.start()
     base_actuator.thread.join()
+    time.sleep(5)
 
     # Create an event with reset_event_timer=True
     # This should reset the timer when it's processed
@@ -53,12 +52,13 @@ def test_reset_event_timer():
     # Create events that should be affected by the timer reset
     event1 = EDAEvent(min_start_time=2.0, channel="Cy5")
     event2 = EDAEvent(min_start_time=3.0, channel="Cy5")
-    event2 = EDAEvent(min_start_time=4.0, channel="Cy5")
+    event3 = EDAEvent(min_start_time=4.0, channel="Cy5")
     queue_manager.register_event(event1)
     queue_manager.register_event(event2)
+    queue_manager.register_event(event3)
 
     # Wait for all events to be processed
-    time.sleep(7)
+    time.sleep(12)
     queue_manager.stop_seq()
 
     # Get the events that were processed after the reset_event

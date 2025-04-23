@@ -123,7 +123,6 @@ class EDASequence(MutableModel):
             if key == "channel_group":
                 setattr(self, key, value)
             if key == "channels":
-                print("CHANNELS", tuple(Channel(**c) for c in value))
                 self.channels = tuple(Channel(**c) for c in value)
 
         return self

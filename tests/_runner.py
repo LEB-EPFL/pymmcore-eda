@@ -13,8 +13,11 @@ class MockRunner:
         self.thread.start()
 
     def _run(self, events):
+        self.time_machine._reset_event_timer()
         _events = self.event_iterator(events)
         for event in _events:
+            if event.reset_event_timer:
+                self.time_machine._reset_event_timer()
             if self.time_machine:
                 acq_time = self.time_machine.event_seconds_elapsed()
                 acq_time = datetime.timedelta(seconds=acq_time)
