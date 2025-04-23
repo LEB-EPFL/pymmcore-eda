@@ -7,6 +7,7 @@ class MockRunner:
         self.events = []
         self._axis_max: dict[str, int] = {}
         self.time_machine = time_machine
+        self._do_timing = False
 
     def run(self, events):
         self.thread = Thread(target=self._run, args=(events,))
@@ -30,7 +31,7 @@ class MockRunner:
             total_time = (
                 f"{now.minute:02d}:{now.second:02d}.{now.microsecond//1000:03d}"
             )
-            print(f"{total_time}|{acq_time} |{event}")
+            print(f"--- {total_time}|{acq_time} |{event}")
             self.events.append(event)
             for k, v in event.index.items():
                 self._axis_max[k] = max(self._axis_max.get(k, 0), v)

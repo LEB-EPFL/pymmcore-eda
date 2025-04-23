@@ -42,23 +42,24 @@ def test_reset_event_timer():
     base_actuator.wait = True
     base_actuator.thread.start()
     base_actuator.thread.join()
-    time.sleep(5)
+    time.sleep(2)
 
+    print('\n\n\n')
     # Create an event with reset_event_timer=True
     # This should reset the timer when it's processed
-    reset_event = EDAEvent(min_start_time=1.0, channel="DAPI", reset_event_timer=True)
+    reset_event = EDAEvent(min_start_time=0.0, channel="DAPI", reset_event_timer=True)
     queue_manager.register_event(reset_event)
 
     # Create events that should be affected by the timer reset
-    event1 = EDAEvent(min_start_time=2.0, channel="Cy5")
-    event2 = EDAEvent(min_start_time=3.0, channel="Cy5")
-    event3 = EDAEvent(min_start_time=4.0, channel="Cy5")
+    event1 = EDAEvent(min_start_time=1.0, channel="Cy5")
+    event2 = EDAEvent(min_start_time=2.0, channel="Cy5")
+    event3 = EDAEvent(min_start_time=3.0, channel="Cy5")
     queue_manager.register_event(event1)
     queue_manager.register_event(event2)
     queue_manager.register_event(event3)
 
     # Wait for all events to be processed
-    time.sleep(12)
+    time.sleep(5)
     queue_manager.stop_seq()
 
     # Get the events that were processed after the reset_event
@@ -74,14 +75,14 @@ def test_reset_event_timer():
 
     assert reset_event_idx is not None, "Reset event was not processed"
 
+
     # The events after the reset should have their timing adjusted
     # Check that the timing between events is as expected
     if len(runner.events) > reset_event_idx + 2:
         # Get the events after the reset
-        post_reset_events = runner.events[reset_event_idx + 1 :]
+        post_reset_events = runner.events[reset_event_idx :]
 
         # Check that the first event after reset was processed soon after reset event
-        # (not waiting for the full original min_start_time)
         reset_time = runner.events[reset_event_idx].min_start_time
         next_event_time = post_reset_events[1].min_start_time
 
@@ -94,9 +95,7 @@ def test_reset_event_timer():
 
         # Check the spacing between subsequent events
         if len(post_reset_events) >= 2:
-            print(post_reset_events[1])
-            second_event_time = post_reset_events[3].min_start_time
-            print(second_event_time)
+            second_event_time = post_reset_events[2].min_start_time
             second_time_diff = second_event_time - next_event_time
             assert (
                 0.9 <= second_time_diff <= 1.1

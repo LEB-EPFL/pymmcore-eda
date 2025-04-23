@@ -62,6 +62,11 @@ class QueueManager:
             )
             event.min_start_time = start
 
+        if event.reset_event_timer:
+            self.event_queue.clear()
+            if self.t_idx > 0:
+                self.warmup = 0
+
         # Add warmup time
         if event.min_start_time:
             event.min_start_time += self.warmup
@@ -73,7 +78,8 @@ class QueueManager:
         """Actuators call this to request an event to be put on the event_register."""
         event = self.prepare_event(event)
         self.event_queue.add(event)
-        self._reset_timer()
+        if event == self.event_queue.peak_next():
+            self._reset_timer()
 
     def queue_next_event(self) -> None:
         """Queue the next event."""
@@ -83,8 +89,8 @@ class QueueManager:
             return
         event = MDAEvent(**eda_event.model_dump())
         self.acq_queue.put(event)
-        time.sleep(self.preemptive)
-        self._reset_timer()
+        self.t_idx = event.index.get('t', 0)
+        Timer(0, self._reset_timer).start()
 
     def stop_seq(self) -> None:
         """Stop the sequence after the events currently on the queue."""
@@ -106,19 +112,13 @@ class QueueManager:
             return
         # self.time_machine.consume_event(self.event_queue.peak_next())
         next_event = self.event_queue.peak_next()
-        start_time = next_event.min_start_time
 
         if next_event.reset_event_timer:
-            if self.t_idx != 0:
-                relative_time = 0
-            else:
-                relative_time = start_time
+            relative_time = next_event.min_start_time
         else:
             relative_time = (
-                start_time - self.time_machine.event_seconds_elapsed() - self.preemptive
-                - self.warmup
+                next_event.min_start_time - self.time_machine.event_seconds_elapsed() - self.preemptive - self.warmup
             )
-        print("relative_time", relative_time)
-        print("event", next_event)
+
         self.timer = Timer(max(relative_time, 0.0), self.queue_next_event)
         self.timer.start()
