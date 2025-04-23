@@ -200,16 +200,16 @@ class EDAEvent(MutableModel):
         if not isinstance(other, EDAEvent):
             return NotImplemented
 
-        # Get axis order from sequence or use the default ('t', 'p', 'g', 'c', 'z')
-        axis_order = self._get_axis_order()
+        # # Get axis order from sequence or use the default ('t', 'p', 'g', 'c', 'z')
+        # axis_order = self._get_axis_order()
 
-        # Compare based on each dimension in the axis order
-        for dim in axis_order:
-            self_val = self._get_dimension_value(dim)
-            other_val = other._get_dimension_value(dim)
-            # If values differ, events are not equal
-            if self_val != other_val:
-                return False
+        # # Compare based on each dimension in the axis order
+        # for dim in axis_order:
+        #     self_val = self._get_dimension_value(dim)
+        #     other_val = other._get_dimension_value(dim)
+        #     # If values differ, events are not equal
+        #     if self_val != other_val:
+        #         return False
 
         # All dimensions are equal, additional attributes check
         return (
@@ -220,6 +220,9 @@ class EDAEvent(MutableModel):
             and self.action == other.action
             and self.keep_shutter_open == other.keep_shutter_open
             and self.reset_event_timer == other.reset_event_timer
+            and self.z_pos == other.z_pos
+            and self.x_pos == other.x_pos
+            and self.y_pos == other.y_pos
         )
 
     def __hash__(self) -> int:

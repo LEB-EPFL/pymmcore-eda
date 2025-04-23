@@ -14,14 +14,21 @@ class DynamicRunner(MDARunner):
 
     def __init__(self, *args: object, **kwargs: object) -> None:
         super().__init__(*args, **kwargs)
-        self.acquisition_timer: Timer = Timer(0, self.acquire_event)
+        self.acquisition_timer: Timer | None = None
         self._events: Iterator[MDAEvent] = iter([])
         self._acquisition_complete = Event()
         self._next_event: MDAEvent | None = None
 
     def _run(self, engine: PMDAEngine, events: Iterable[MDAEvent]) -> None:
         """Main execution of events, inside the try/except block of `run`."""
-        event_iterator = getattr(engine, "event_iterator", iter)
+        if isinstance(events, Iterator):
+            # if an iterator is passed directly, then we use that iterator
+            # instead of the engine's event_iterator.  Directly passing an iterator
+            # is an advanced use case, (for example, `iter(Queue(), None)` for event-
+            # driven acquisition) and we don't want the engine to interfere with it.
+            event_iterator = iter
+        else:
+            event_iterator = getattr(engine, "event_iterator", iter)
         self._events = event_iterator(events)
         self._reset_event_timer()
         self._sequence_t0 = self._t0
@@ -30,8 +37,15 @@ class DynamicRunner(MDARunner):
 
     def set_timer(self) -> None:
         """Set the timer for the next event."""
-        if not self._peek_next_event():
+        if not self._peek_next_event() or self._check_canceled():
+            self.acquisition_timer.cancel()
             self._acquisition_complete.set()
+            return
+
+        if self.is_paused():
+            self._paused_time += self._pause_interval  # fixme: be more precise
+            self.acquisition_timer.cancel()
+            Timer(self._pause_interval, self.set_timer).start()
             return
 
         event = self._next_event
@@ -79,6 +93,7 @@ class DynamicRunner(MDARunner):
     def _peek_next_event(self) -> bool:
         try:
             next_event = next(self._events)
+            print("NEXT EVENT", next_event)
             self._next_event = next_event
             # Put the event back by chaining it with the rest of the iterator
             self._events = cast(
@@ -88,3 +103,17 @@ class DynamicRunner(MDARunner):
         except StopIteration:
             self._next_event = None
             return False
+
+    def cancel(self) -> None:
+        """Cancel the currently running acquisition."""
+        self._canceled = True
+        self._paused_time = 0
+        self.set_timer()
+
+    def toggle_pause(self) -> None:
+        """Toggle the paused state of the current acquisition."""
+        if self.is_running():
+            self._paused = not self._paused
+            self._signals.sequencePauseToggled.emit(self._paused)
+            if self._paused:
+                self.set_timer()

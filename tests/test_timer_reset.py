@@ -53,9 +53,10 @@ def test_reset_event_timer():
     # Create events that should be affected by the timer reset
     event1 = EDAEvent(min_start_time=2.0, channel="Cy5")
     event2 = EDAEvent(min_start_time=3.0, channel="Cy5")
-    event2 = EDAEvent(min_start_time=4.0, channel="Cy5")
+    event3 = EDAEvent(min_start_time=4.0, channel="Cy5")
     queue_manager.register_event(event1)
     queue_manager.register_event(event2)
+    queue_manager.register_event(event3)
 
     # Wait for all events to be processed
     time.sleep(7)

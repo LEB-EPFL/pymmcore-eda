@@ -18,7 +18,7 @@ def test_actuator_reg():
             *list(mmc.getDeviceAdapterSearchPaths()),
         ]
     )
-    mmc.loadSystemConfiguration()
+    mmc.loadSystemConfiguration('MMConfig_demo.cfg')
     mmc.mda.engine.use_hardware_sequencing = False
 
     eda_sequence = EDASequence(channels=("DAPI", "Cy5"))
@@ -29,14 +29,12 @@ def test_actuator_reg():
         time_plan={"interval": 1, "loops": 3},
     )
     base_actuator = MDAActuator(queue_manager, mda_sequence)
-    base_actuator.wait = False
 
     mda_sequence2 = MDASequence(
         channels=["Cy5"],
         time_plan={"interval": 1, "loops": 3},
     )
     base_actuator2 = MDAActuator(queue_manager, mda_sequence2)
-    base_actuator2.wait = False
 
     runner = MockRunner()
 
@@ -81,14 +79,12 @@ def test_double_reg():
         time_plan={"interval": 1, "loops": 3},
     )
     base_actuator = MDAActuator(queue_manager, mda_sequence)
-    base_actuator.wait = False
 
     mda_sequence2 = MDASequence(
         channels=["Cy5", "DAPI"],
         time_plan={"interval": 1, "loops": 3},
     )
     base_actuator2 = MDAActuator(queue_manager, mda_sequence2)
-    base_actuator2.wait = False
 
     runner = MockRunner()
 
