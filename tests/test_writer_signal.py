@@ -11,11 +11,13 @@ sys.path.append(str(Path(__file__).parent.parent))
 def test_mda():
     from pymmcore_plus import CMMCorePlus
     from useq import Channel, MDASequence
+    from threading import Thread
 
     from pymmcore_eda.actuator import ButtonActuator, MDAActuator
     from pymmcore_eda.event_hub import EventHub
     from pymmcore_eda.queue_manager import QueueManager
     from pymmcore_eda.writer import AdaptiveWriter
+    from pymmcore_eda._runner import DynamicRunner
 
     mmc = CMMCorePlus()
     mmc.setDeviceAdapterSearchPaths(
@@ -27,6 +29,9 @@ def test_mda():
     )
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False
+
+    runner = DynamicRunner()
+    runner.set_engine(mmc.mda.engine)
 
     mmc.setProperty("Camera", "OnCameraCCDXSize", 512)
     mmc.setProperty("Camera", "OnCameraCCDYSize", 512)
@@ -46,7 +51,12 @@ def test_mda():
     base_actuator = MDAActuator(queue_manager, mda_sequence)
     base_actuator.thread.start()
     ButtonActuator(queue_manager)
-    mmc.run_mda(queue_manager.acq_queue_iterator, output=writer)
+    mda_th = Thread(
+        target=runner.run,
+        args=(queue_manager.acq_queue_iterator,),
+        kwargs={"output": writer}
+    )
+    mda_th.start()
     base_actuator.thread.join()
     queue_manager.stop_seq()
     time.sleep(5)

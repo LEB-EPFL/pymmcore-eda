@@ -86,7 +86,7 @@ def test_double_reg():
     )
     base_actuator2 = MDAActuator(queue_manager, mda_sequence2)
 
-    runner = MockRunner()
+    runner = MockRunner(stop=queue_manager.stop)
 
     base_actuator2.thread.start()
     time.sleep(1)
@@ -94,7 +94,7 @@ def test_double_reg():
     time.sleep(1)
     # mmc.run_mda(queue_manager.q_iterator)
     runner.run(queue_manager.acq_queue_iterator)
-    time.sleep(5)
+    time.sleep(6)
     queue_manager.stop_seq()
     time.sleep(1)
     assert len(runner.events) == 6

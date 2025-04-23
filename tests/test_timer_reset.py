@@ -29,7 +29,7 @@ def test_reset_timer_eda():
     # Create a sequence with multiple channels
     eda_sequence = EDASequence(channels=("DAPI", "Cy5"))
     queue_manager = QueueManager(eda_sequence=eda_sequence)
-    runner = MockRunner(time_machine=queue_manager.time_machine)
+    runner = MockRunner(stop=queue_manager.stop)
     runner.run(queue_manager.acq_queue_iterator)
 
     # Wait for queue manager warmup

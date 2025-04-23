@@ -63,7 +63,7 @@ def test_channel_ordering_with_sequence(eda_sequence, events_with_sequence):
     # Get events in order and check channel order matches the sequence's channel order
     channels = []
     while len(queue) > 0:
-        event = queue.get_next()
+        event = queue.get()
         channels.append(event.channel.config)
 
     # Expected order based on sequence.channels: TRITC, DAPI, GFP, Cy5
@@ -98,7 +98,7 @@ def test_mixed_sequence_and_no_sequence():
     # Get events and check order
     events = []
     while len(queue) > 0:
-        events.append(queue.get_next())
+        events.append(queue.get())
 
     # Events with sequence should come first, in sequence channel order,
     # followed by events without sequence
@@ -143,7 +143,7 @@ def test_channel_not_in_sequence():
     # Get events and check order
     events = []
     while len(queue) > 0:
-        events.append(queue.get_next())
+        events.append(queue.get())
 
     # Events with channels in sequence should come first, in sequence order
     assert events[0].channel.config == "DAPI"
@@ -184,7 +184,7 @@ def test_attach_index_with_sequence():
     # Check sorting - all events should come out in order
     events = []
     while len(queue) > 0:
-        events.append(queue.get_next())
+        events.append(queue.get())
 
     # Events should be sorted by time first, then channel (per seq.axis_order)
     print(events)

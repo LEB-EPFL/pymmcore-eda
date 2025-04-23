@@ -41,7 +41,7 @@ class DynamicRunner(MDARunner):
             self.acquisition_timer.cancel()
             self._acquisition_complete.set()
             return
-
+        
         if self.is_paused():
             self._paused_time += self._pause_interval  # fixme: be more precise
             self.acquisition_timer.cancel()
@@ -60,6 +60,7 @@ class DynamicRunner(MDARunner):
             remaining_wait_time = 0.0
 
         # Set the timer to call acquire_event after the next time
+        self._signals.awaitingEvent.emit(event, remaining_wait_time)
         self.acquisition_timer = Timer(remaining_wait_time, self.acquire_event)
         self.acquisition_timer.start()
 

@@ -15,7 +15,7 @@ class DynamicEventQueue:
     it tracks unique dimension values and allows indexing by ordinal position.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, stop:object = object()) -> None:
         self._events = SortedSet()
 
         self._unique_indexes: dict[str, SortedSet[int]] = {
@@ -27,12 +27,15 @@ class DynamicEventQueue:
         # Channels are special, as they are not integers
         self._channels: tuple[str, ...] = ()
 
+        self.stop = stop
+        self.stopped = False
         self._events_by_time: dict[float, list[EDAEvent]] = defaultdict(list)
         self._t_index = 0  # Sequential index counter
         self.sequence = None
         self._lock = threading.Lock()
 
-    def add(self, event: EDAEvent) -> None:
+
+    def add(self, event: EDAEvent|object) -> None:
         """Add an event to the queue, resolving any dimension indices in the event."""
         with self._lock:
             if event.sequence and not self.sequence:
@@ -42,7 +45,6 @@ class DynamicEventQueue:
             # Offset time relative
             if event.start_time_offset:
                 event.min_start_time += event.start_time_offset
-
             self._events.add(event)
 
             if (
@@ -113,8 +115,11 @@ class DynamicEventQueue:
         if event.pos_name is not None:
             self._unique_indexes["g"].add(event.pos_name)
 
-    def get_next(self) -> EDAEvent | None:
+    def get(self) -> EDAEvent | None:
         """Get the next event from the queue (first in order)."""
+        if self.stopped:
+            self._events.clear()
+            return self.stop
         if len(self._events) == 0:
             return None
 

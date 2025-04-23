@@ -27,10 +27,9 @@ def test_complex():
     eda_sequence = EDASequence(channels=("DAPI", "Cy5"))
     queue_manager = QueueManager(eda_sequence=eda_sequence)
     runner = MockRunner()
-    runner.run(queue_manager.acq_queue_iterator)
 
     mda_sequence = MDASequence(
-        channels=(Channel(config="Cy5", exposure=100),),
+        channels=[Channel(config="Cy5", exposure=100)],
         time_plan={"interval": 1, "loops": 10},
     )
     base_actuator = MDAActuator(queue_manager, mda_sequence)
@@ -39,17 +38,19 @@ def test_complex():
     base_actuator.thread.join()
 
     event = EDAEvent(attach_index={"t": 3}, channel="DAPI")
-    queue_manager.register_event(event)
-
-    event2 = EDAEvent(min_start_time=-4, channel="DAPI")
-    queue_manager.register_event(event2)
-
     event3 = EDAEvent(attach_index={"t": 3}, channel="DAPI")
+    queue_manager.register_event(event)
     queue_manager.register_event(event3)
 
-    event4 = EDAEvent(min_start_time=-5.0, channel="Cy5")
-    event5 = EDAEvent(min_start_time=-5.1, channel="Cy5")
-    event6 = EDAEvent(min_start_time=-5.2, channel="Cy5")
+    runner.run(queue_manager.acq_queue_iterator)
+
+    event2 = EDAEvent(min_start_time=5, channel="DAPI")
+    queue_manager.register_event(event2)
+
+
+    event4 = EDAEvent(min_start_time=5.1, channel="Cy5")
+    event5 = EDAEvent(min_start_time=5.2, channel="Cy5")
+    event6 = EDAEvent(min_start_time=5.3, channel="Cy5")
     for event in (event4, event5, event6):
         queue_manager.register_event(event)
 
@@ -84,7 +85,7 @@ def test_complex():
     late_cy5_events = [
         e
         for e in runner.events
-        if e.channel.config == "Cy5" and e.min_start_time > 8 and e.min_start_time < 9
+        if e.channel.config == "Cy5" and e.min_start_time > 8 and e.min_start_time < 8.5
     ]
     assert (
         len(late_cy5_events) == 3
@@ -125,7 +126,7 @@ def test_edge_cases():
     # Create a sequence with multiple channels to test channel switching
     eda_sequence = EDASequence(channels=("DAPI", "FITC", "Cy5"))
     queue_manager = QueueManager(eda_sequence=eda_sequence)
-    runner = MockRunner()
+    runner = MockRunner(stop=queue_manager.stop)
     runner.run(queue_manager.acq_queue_iterator)
 
     # Wait for queue manager warmup (3 seconds)
@@ -165,7 +166,7 @@ def test_edge_cases():
     # Edge case 6: Rapid succession of events with distinct timestamps
     # Using different exposures to ensure uniqueness
     for i in range(10):
-        rapid_event = EDAEvent(min_start_time=-0.01 * i, channel="Cy5", exposure=i + 1)
+        rapid_event = EDAEvent(min_start_time=3+0.01 * i, channel="Cy5", exposure=i + 1)
         queue_manager.register_event(rapid_event)
 
     # Wait for all events to be executed (base sequence + buffer time)

@@ -39,13 +39,13 @@ def test_basic_queue_operations(queue, sample_events):
     assert len(queue) == 3
 
     # Check events come out in correct order
-    assert queue.get_next().min_start_time == 0.0
-    assert queue.get_next().min_start_time == 5.0
-    assert queue.get_next().min_start_time == 10.0
+    assert queue.get().min_start_time == 0.0
+    assert queue.get().min_start_time == 5.0
+    assert queue.get().min_start_time == 10.0
 
     # Queue should be empty
     assert len(queue) == 0
-    assert queue.get_next() is None
+    assert queue.get() is None
 
 
 def test_dimension_indexing(queue, sample_events):
@@ -100,7 +100,7 @@ def test_single_attach_index(queue, sample_events):
     # Verify event ordering
     times = []
     while len(queue) > 0:
-        times.append(queue.get_next().min_start_time)
+        times.append(queue.get().min_start_time)
 
     assert times == [0.0, 5.0, 5.0, 10.0]
 
