@@ -93,7 +93,6 @@ class DynamicRunner(MDARunner):
     def _peek_next_event(self) -> bool:
         try:
             next_event = next(self._events)
-            print("NEXT EVENT", next_event)
             self._next_event = next_event
             # Put the event back by chaining it with the rest of the iterator
             self._events = cast(

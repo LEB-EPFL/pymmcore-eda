@@ -13,7 +13,7 @@ from pymmcore_eda.actuator import MDAActuator
 from pymmcore_eda.queue_manager import QueueManager
 
 
-def test_reset_event_timer():
+def test_reset_timer_eda():
     """Test that the reset_event_timer on EDAEvent properly resets the timer."""
     # Setup the core components
     mmc = CMMCorePlus()

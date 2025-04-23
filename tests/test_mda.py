@@ -283,19 +283,22 @@ def test_runner_pause(qtbot: QtBot) -> None:
 
 def test_reset_event_timer(core: CMMCorePlus) -> None:
     seq = [
-        MDAEvent(min_start_time=0),
+        MDAEvent(min_start_time=0, reset_event_timer=True),
         MDAEvent(min_start_time=0.2),
         MDAEvent(min_start_time=0, reset_event_timer=True),
         MDAEvent(min_start_time=0.2),
+        MDAEvent(min_start_time=0.4),
     ]
     meta: list[float] = []
     runner = DynamicRunner()
     runner.set_engine(core.mda.engine)  # type: ignore
-    runner.events.frameReady.connect(lambda f, e, m: meta.append(m["runner_time_ms"]))
+    runner.events.frameReady.connect(lambda f, e, m: meta.append(time.perf_counter()*1000))
     runner.run(seq)
-    # ensure that the 4th event occurred at least 190ms after the 3rd event
+
+    # ensure that the 5th event occurred at least 190ms after the 4th event
+    # The first after reset can be a little delayed
     # (allow some jitter)
-    assert meta[3] >= meta[2] + 190
+    assert meta[4] >= meta[3] + 190
 
 
 def test_queue_mda(core: CMMCorePlus) -> None:

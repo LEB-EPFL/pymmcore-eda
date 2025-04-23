@@ -125,7 +125,7 @@ class EDAEvent(MutableModel):
         for dim in axis_order:
             self_val = self._get_dimension_value(dim)
             other_val = other._get_dimension_value(dim)
-
+            
             # Skip dimensions where both values are None
             if self_val is None and other_val is None:
                 continue
@@ -200,16 +200,18 @@ class EDAEvent(MutableModel):
         if not isinstance(other, EDAEvent):
             return NotImplemented
 
-        # # Get axis order from sequence or use the default ('t', 'p', 'g', 'c', 'z')
-        # axis_order = self._get_axis_order()
+        # Get axis order from sequence or use the default ('t', 'p', 'g', 'c', 'z')
+        axis_order = self._get_axis_order()
 
-        # # Compare based on each dimension in the axis order
-        # for dim in axis_order:
-        #     self_val = self._get_dimension_value(dim)
-        #     other_val = other._get_dimension_value(dim)
-        #     # If values differ, events are not equal
-        #     if self_val != other_val:
-        #         return False
+        # Compare based on each dimension in the axis order
+        for dim in axis_order:
+            if dim == "c":
+                continue
+            self_val = self._get_dimension_value(dim)
+            other_val = other._get_dimension_value(dim)
+            # If values differ, events are not equal
+            if self_val != other_val:
+                return False
 
         # All dimensions are equal, additional attributes check
         return (
@@ -232,11 +234,14 @@ class EDAEvent(MutableModel):
         ] = []
         axis_order = self._get_axis_order()
         for dim in axis_order:
+            if dim == "c":
+                continue
             val = self._get_dimension_value(dim)
             hashable_parts.append(val)
 
         hashable_parts.extend(
             [
+                self.channel.config if self.channel else None,
                 self.min_start_time,
                 self.exposure,
                 # Convert list to tuple since lists aren't hashable

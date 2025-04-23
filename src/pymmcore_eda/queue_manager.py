@@ -51,7 +51,7 @@ class QueueManager:
         """Prepare an event for the queue."""
         if isinstance(event, MDAEvent):
             event = EDAEvent().from_mda_event(event, self.eda_sequence)
-        if self.eda_sequence and event.sequence is None:
+        if self.eda_sequence:
             event.sequence = self.eda_sequence
         # Offset time absolute
         if event.min_start_time and event.min_start_time < 0.0:
