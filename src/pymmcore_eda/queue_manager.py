@@ -9,11 +9,13 @@ from useq import MDAEvent
 
 from pymmcore_eda._eda_event import EDAEvent
 from pymmcore_eda._event_queue import DynamicEventQueue
-from pymmcore_eda.time_machine import TimeMachine
 
 if TYPE_CHECKING:
+    from pymmcore_plus import CMMCorePlus
+
     from pymmcore_eda._eda_sequence import EDASequence
     from pymmcore_eda.actuator import MDAActuator  # should be generalized
+    from pymmcore_eda.time_machine import TimeMachine
 
 
 class QueueManager:
@@ -24,21 +26,29 @@ class QueueManager:
 
     def __init__(
         self,
-        time_machine: TimeMachine | None = None,
+        mmcore: CMMCorePlus | None = None,
         eda_sequence: EDASequence | None = None,
+        time_machine: TimeMachine | None = None,
     ):
         self.acq_queue: Queue = Queue()
         self.stop = object()
         self.acq_queue_iterator = iter(self.acq_queue.get, self.stop)
-        self.time_machine = time_machine or TimeMachine()
+
+        self.mmc = mmcore
+        if self.mmc:
+            self.time_machine = time_machine or self.mmc.mda
+            self.mmc.mda.events.sequencePauseToggled.connect(self.toggle_pause)
+            self.mmc.mda.events.sequenceCanceled.connect(self.stop_seq)
 
         self.preemptive = 0.0
         self.t_idx = 0
         self.warmup = 3
         self.reset_correction = 0
+        self.paused_time = 0.0
         self.next_time = None
         self.event_queue = DynamicEventQueue()
         self.can_reset = True
+        self.canceled = False
 
         self.actuators: dict[str, dict[str, Any]] = {}
 
@@ -103,11 +113,14 @@ class QueueManager:
         event = eda_event.to_mda_event()
         self.acq_queue.put(event)
         wait = 0.05 if event.reset_event_timer else 0.0
-        Timer(wait, self._reset_timer).start()
-        self.t_idx = event.index.get("t", 0)
+        if not self.canceled:
+            Timer(wait, self._reset_timer).start()
+            self.t_idx = event.index.get("t", 0)
 
     def stop_seq(self) -> None:
         """Stop the sequence after the events currently on the queue."""
+        self.canceled = True
+        self.timer.cancel()
         self.acq_queue.put(self.stop)
 
     def empty_queue(self) -> None:
@@ -134,7 +147,19 @@ class QueueManager:
                 next_event.min_start_time
                 - self.time_machine.event_seconds_elapsed()
                 - self.reset_correction
+                + self.paused_time
             )
 
         self.timer = Timer(max(relative_time, 0.0), self.queue_next_event)
         self.timer.start()
+
+    def toggle_pause(self, paused: bool) -> None:
+        """Toggle the pause state of the sequence."""
+        if paused:
+            self.timer.cancel()
+            self.paused_start = self.time_machine.event_seconds_elapsed()
+        else:
+            self.paused_time += (
+                self.time_machine.event_seconds_elapsed() - self.paused_start
+            )
+            self._reset_timer()
