@@ -28,7 +28,7 @@ def test_reset_event_timer():
 
     # Create a sequence with multiple channels
     eda_sequence = EDASequence(channels=("DAPI", "Cy5"))
-    queue_manager = QueueManager(time_machine=mmc.mda, eda_sequence=eda_sequence)
+    queue_manager = QueueManager(mmcore=mmc, eda_sequence=eda_sequence)
     runner = MockRunner(time_machine=queue_manager.time_machine)
 
     runner.run(queue_manager.acq_queue_iterator)

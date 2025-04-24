@@ -22,7 +22,7 @@ def test_actuator_reg():
     mmc.mda.engine.use_hardware_sequencing = False
 
     eda_sequence = EDASequence(channels=("DAPI", "Cy5"))
-    queue_manager = QueueManager(eda_sequence=eda_sequence, time_machine=mmc.mda)
+    queue_manager = QueueManager(eda_sequence=eda_sequence, mmcore=mmc)
 
     mda_sequence = MDASequence(
         channels=["DAPI"],
@@ -74,7 +74,7 @@ def test_double_reg():
     mmc.mda.engine.use_hardware_sequencing = False
 
     eda_sequence = EDASequence(channels=("DAPI", "Cy5"))
-    queue_manager = QueueManager(eda_sequence=eda_sequence, time_machine=mmc.mda)
+    queue_manager = QueueManager(eda_sequence=eda_sequence, mmcore=mmc)
 
     mda_sequence = MDASequence(
         channels=["DAPI"],

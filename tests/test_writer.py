@@ -27,7 +27,7 @@ def test_mda():
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False
 
-    queue_manager = QueueManager()
+    queue_manager = QueueManager(mmcore=mmc)
 
     mda_sequence = MDASequence(
         channels=["DAPI"],
@@ -41,8 +41,9 @@ def test_mda():
     mmc.run_mda(queue_manager.acq_queue_iterator, output=writer)
     base_actuator.thread.start()
     base_actuator.thread.join()
+    time.sleep(5)
     queue_manager.stop_seq()
-    time.sleep(3)
+    time.sleep(4)
     zarr_store = ts.open(
         {
             "driver": "zarr",

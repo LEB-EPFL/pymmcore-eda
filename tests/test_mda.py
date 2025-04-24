@@ -21,7 +21,7 @@ def test_mda():
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False
 
-    queue_manager = QueueManager(time_machine=mmc.mda)
+    queue_manager = QueueManager(mmcore=mmc)
 
     mda_sequence = MDASequence(
         channels=["DAPI"],

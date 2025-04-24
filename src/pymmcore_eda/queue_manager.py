@@ -132,14 +132,13 @@ class QueueManager:
 
     def _reset_timer(self) -> None:
         """Set or reset the timer for an event."""
-        # If we are the time 0 event and we reset, wait for potential other events to
-        # be queued
         self.timer.cancel()
         if len(self.event_queue) == 0:
             return
-        # self.time_machine.consume_event(self.event_queue.peak_next())
-        next_event = self.event_queue.peak_next()
+        if self.time_machine and hasattr(self.time_machine, "consume_event"):
+            self.time_machine.consume_event(self.event_queue.peak_next())
 
+        next_event = self.event_queue.peak_next()
         if next_event.reset_event_timer:
             relative_time = next_event.min_start_time + self.warmup
         else:

@@ -36,7 +36,7 @@ def test_mda():
     writer.reshape_on_finished = True
 
     EventHub(mmc.mda, writer)
-    queue_manager = QueueManager(time_machine=mmc.mda)
+    queue_manager = QueueManager(mmcore=mmc)
 
     mda_sequence = MDASequence(
         channels=(Channel(config="DAPI", exposure=100),),

@@ -25,7 +25,7 @@ def test_complex():
     mmc.mda.engine.use_hardware_sequencing = False
 
     eda_sequence = EDASequence(channels=("DAPI", "Cy5"))
-    queue_manager = QueueManager(eda_sequence=eda_sequence, time_machine=mmc.mda)
+    queue_manager = QueueManager(eda_sequence=eda_sequence, mmcore=mmc)
     runner = MockRunner(time_machine=queue_manager.time_machine)
     runner.run(queue_manager.acq_queue_iterator)
 
@@ -128,7 +128,7 @@ def test_edge_cases():
 
     # Create a sequence with multiple channels to test channel switching
     eda_sequence = EDASequence(channels=("DAPI", "FITC", "Cy5"))
-    queue_manager = QueueManager(eda_sequence=eda_sequence, time_machine=mmc.mda)
+    queue_manager = QueueManager(eda_sequence=eda_sequence, mmcore=mmc)
     runner = MockRunner(time_machine=queue_manager.time_machine)
     runner.run(queue_manager.acq_queue_iterator)
 
@@ -170,7 +170,7 @@ def test_edge_cases():
         queue_manager.register_event(rapid_event)
 
     # Wait for all events to be executed (base sequence + buffer time)
-    time.sleep(5)
+    time.sleep(7)
 
     # Stop the sequence before the future event would execute
     queue_manager.stop_seq()
