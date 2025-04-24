@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import uuid
 from queue import Queue
 from threading import Timer
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from useq import MDAEvent
 
@@ -39,30 +40,38 @@ class QueueManager:
         self.event_queue = DynamicEventQueue()
         self.can_reset = True
 
+        self.actuators: dict[str, dict[str, Any]] = {}
+
         self.eda_sequence = eda_sequence
         self._axis_max: dict[str, int] = {}
         self.timer = Timer(0, self.queue_next_event)
 
     def register_actuator(
         self, actuator: MDAActuator, n_channels: int = 1
-    ) -> dict[str, bool | list[int]]:
+    ) -> dict[str, Any]:
         """Actuator asks for indices for example which channel to push to."""
-        settings: dict[str, bool | list[int]] = {}
+        settings: dict[str, Any] = {}
         self._axis_max["c"] = self._axis_max.get("c", 0) + n_channels
         settings["channels"] = list(
             range(self._axis_max["c"] - n_channels, self._axis_max["c"])
         )
         # Only one actuator can reset the timer at the beginning
         settings["can_reset"] = self.can_reset
+        settings["id"] = str(uuid.uuid4())
         self.can_reset = False
+        self.actuators[settings["id"]] = settings
         return settings
 
-    def prepare_event(self, event: MDAEvent | EDAEvent) -> EDAEvent:
+    def prepare_event(self, event: MDAEvent | EDAEvent, actuator_id: str) -> EDAEvent:
         """Prepare an event for the queue."""
         if isinstance(event, MDAEvent):
             event = EDAEvent().from_mda_event(event, self.eda_sequence)
         if self.eda_sequence and event.sequence is None:
             event.sequence = self.eda_sequence
+
+        if event.reset_event_timer and actuator_id in self.actuators.keys():
+            event.reset_event_timer = self.actuators[actuator_id]["can_reset"]
+
         # Offset time absolute
         if event.min_start_time and event.min_start_time < 0.0:
             start = self.time_machine.event_seconds_elapsed() + abs(
@@ -74,16 +83,13 @@ class QueueManager:
             self.warmup = 0
             self.reset_correction = event.min_start_time
 
-        # Add warmup time
-        if event.min_start_time:
-            event.min_start_time += self.warmup
-        else:
-            event.min_start_time = self.warmup
         return event
 
-    def register_event(self, event: MDAEvent | EDAEvent) -> None:
+    def register_event(
+        self, event: MDAEvent | EDAEvent, actuator_id: str = "0"
+    ) -> None:
         """Actuators call this to request an event to be put on the event_register."""
-        event = self.prepare_event(event)
+        event = self.prepare_event(event, actuator_id)
         self.event_queue.add(event)
         if event == self.event_queue.peak_next():
             self._reset_timer()
@@ -122,14 +128,13 @@ class QueueManager:
         next_event = self.event_queue.peak_next()
 
         if next_event.reset_event_timer:
-            relative_time = next_event.min_start_time
+            relative_time = next_event.min_start_time + self.warmup
         else:
             relative_time = (
                 next_event.min_start_time
                 - self.time_machine.event_seconds_elapsed()
-                - self.preemptive
-                - self.warmup
                 - self.reset_correction
             )
+
         self.timer = Timer(max(relative_time, 0.0), self.queue_next_event)
         self.timer.start()

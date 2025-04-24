@@ -205,6 +205,8 @@ class EDAEvent(MutableModel):
 
         # Compare based on each dimension in the axis order
         for dim in axis_order:
+            if dim == "c":
+                continue
             self_val = self._get_dimension_value(dim)
             other_val = other._get_dimension_value(dim)
             # If values differ, events are not equal
@@ -219,7 +221,9 @@ class EDAEvent(MutableModel):
             and self.properties == other.properties
             and self.action == other.action
             and self.keep_shutter_open == other.keep_shutter_open
-            and self.reset_event_timer == other.reset_event_timer
+            and self.z_pos == other.z_pos
+            and self.x_pos == other.x_pos
+            and self.y_pos == other.y_pos
         )
 
     def __hash__(self) -> int:
@@ -229,11 +233,14 @@ class EDAEvent(MutableModel):
         ] = []
         axis_order = self._get_axis_order()
         for dim in axis_order:
+            if dim == "c":
+                continue
             val = self._get_dimension_value(dim)
             hashable_parts.append(val)
 
         hashable_parts.extend(
             [
+                self.channel.config if self.channel else None,
                 self.min_start_time,
                 self.exposure,
                 # Convert list to tuple since lists aren't hashable
@@ -243,7 +250,6 @@ class EDAEvent(MutableModel):
                 if hasattr(self.action, "__hash__")
                 else id(self.action),
                 self.keep_shutter_open,
-                self.reset_event_timer,
             ]
         )
 
@@ -287,6 +293,9 @@ class EDAEvent(MutableModel):
                 continue
             if key == "sequence" and eda_sequence:
                 setattr(self, key, eda_sequence)
+                continue
+            elif key == "sequence" and self.sequence:
+                setattr(self, key, self.sequence)
                 continue
             elif key == "sequence" and isinstance(value, dict):
                 try:
