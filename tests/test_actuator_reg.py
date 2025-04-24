@@ -22,7 +22,7 @@ def test_actuator_reg():
     mmc.mda.engine.use_hardware_sequencing = False
 
     eda_sequence = EDASequence(channels=("DAPI", "Cy5"))
-    queue_manager = QueueManager(eda_sequence=eda_sequence)
+    queue_manager = QueueManager(eda_sequence=eda_sequence, time_machine=mmc.mda)
 
     mda_sequence = MDASequence(
         channels=["DAPI"],
@@ -38,7 +38,7 @@ def test_actuator_reg():
     base_actuator2 = MDAActuator(queue_manager, mda_sequence2)
     base_actuator2.wait = False
 
-    runner = MockRunner()
+    runner = MockRunner(mmc.mda)
 
     base_actuator.thread.start()
     time.sleep(1)
@@ -46,7 +46,7 @@ def test_actuator_reg():
     time.sleep(1)
     # mmc.run_mda(queue_manager.q_iterator)
     runner.run(queue_manager.acq_queue_iterator)
-    time.sleep(7)
+    time.sleep(8)
     queue_manager.stop_seq()
     time.sleep(1)
     assert len(runner.events) == 6

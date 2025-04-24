@@ -3,7 +3,6 @@ from __future__ import annotations
 from queue import Queue
 from threading import Timer
 from typing import TYPE_CHECKING
-import time
 
 from useq import MDAEvent
 
@@ -32,11 +31,13 @@ class QueueManager:
         self.acq_queue_iterator = iter(self.acq_queue.get, self.stop)
         self.time_machine = time_machine or TimeMachine()
 
-        self.preemptive = 0.02
+        self.preemptive = 0.0
         self.t_idx = 0
         self.warmup = 3
+        self.reset_correction = 0
         self.next_time = None
         self.event_queue = DynamicEventQueue()
+        self.can_reset = True
 
         self.eda_sequence = eda_sequence
         self._axis_max: dict[str, int] = {}
@@ -44,10 +45,17 @@ class QueueManager:
 
     def register_actuator(
         self, actuator: MDAActuator, n_channels: int = 1
-    ) -> list[int]:
+    ) -> dict[str, bool | list[int]]:
         """Actuator asks for indices for example which channel to push to."""
+        settings: dict[str, bool | list[int]] = {}
         self._axis_max["c"] = self._axis_max.get("c", 0) + n_channels
-        return list(range(self._axis_max["c"] - n_channels, self._axis_max["c"]))
+        settings["channels"] = list(
+            range(self._axis_max["c"] - n_channels, self._axis_max["c"])
+        )
+        # Only one actuator can reset the timer at the beginning
+        settings["can_reset"] = self.can_reset
+        self.can_reset = False
+        return settings
 
     def prepare_event(self, event: MDAEvent | EDAEvent) -> EDAEvent:
         """Prepare an event for the queue."""
@@ -62,10 +70,9 @@ class QueueManager:
             )
             event.min_start_time = start
 
-        if event.reset_event_timer:
-            self.event_queue.clear()
-            if self.t_idx > 0:
-                self.warmup = 0
+        if event.reset_event_timer and self.t_idx > 0:
+            self.warmup = 0
+            self.reset_correction = event.min_start_time
 
         # Add warmup time
         if event.min_start_time:
@@ -87,10 +94,11 @@ class QueueManager:
         if not eda_event:
             self.stop_seq()
             return
-        event = MDAEvent(**eda_event.model_dump())
+        event = eda_event.to_mda_event()
         self.acq_queue.put(event)
-        self.t_idx = event.index.get('t', 0)
-        Timer(0, self._reset_timer).start()
+        wait = 0.05 if event.reset_event_timer else 0.0
+        Timer(wait, self._reset_timer).start()
+        self.t_idx = event.index.get("t", 0)
 
     def stop_seq(self) -> None:
         """Stop the sequence after the events currently on the queue."""
@@ -117,8 +125,11 @@ class QueueManager:
             relative_time = next_event.min_start_time
         else:
             relative_time = (
-                next_event.min_start_time - self.time_machine.event_seconds_elapsed() - self.preemptive - self.warmup
+                next_event.min_start_time
+                - self.time_machine.event_seconds_elapsed()
+                - self.preemptive
+                - self.warmup
+                - self.reset_correction
             )
-
         self.timer = Timer(max(relative_time, 0.0), self.queue_next_event)
         self.timer.start()

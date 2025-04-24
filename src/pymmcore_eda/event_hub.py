@@ -8,6 +8,7 @@ from useq import MDAEvent
 
 if TYPE_CHECKING:
     from pymmcore_plus.mda import MDARunner
+
     from pymmcore_eda.writer import AdaptiveWriter
 
 

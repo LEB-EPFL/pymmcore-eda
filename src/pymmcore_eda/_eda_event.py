@@ -297,3 +297,12 @@ class EDAEvent(MutableModel):
                 continue
             setattr(self, key, value)
         return self
+
+    def to_mda_event(self, retain_min_start_time: bool = False) -> MDAEvent:
+        """Convert this EDAEvent to a useq.MDAEvent instance."""
+        # Create a copy of the current event
+        event_dict = self.model_dump()
+        if not retain_min_start_time:
+            event_dict["metadata"]["dynamic_start_time"] = event_dict["min_start_time"]
+            event_dict["min_start_time"] = None
+        return MDAEvent(**event_dict)
