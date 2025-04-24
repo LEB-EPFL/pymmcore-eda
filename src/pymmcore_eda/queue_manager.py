@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
     from pymmcore_eda._eda_sequence import EDASequence
     from pymmcore_eda.actuator import MDAActuator  # should be generalized
-    from pymmcore_eda.time_machine import TimeMachine
+from pymmcore_eda.time_machine import TimeMachine
 
 
 class QueueManager:
@@ -35,10 +35,13 @@ class QueueManager:
         self.acq_queue_iterator = iter(self.acq_queue.get, self.stop)
 
         self.mmc = mmcore
+        self.time_machine: TimeMachine = time_machine
         if self.mmc:
             self.time_machine = time_machine or self.mmc.mda
             self.mmc.mda.events.sequencePauseToggled.connect(self.toggle_pause)
             self.mmc.mda.events.sequenceCanceled.connect(self.stop_seq)
+        if not self.time_machine:
+            self.time_machine = TimeMachine()
 
         self.preemptive = 0.0
         self.t_idx = 0
@@ -54,12 +57,12 @@ class QueueManager:
 
         self.eda_sequence = eda_sequence
         self._axis_max: dict[str, int] = {}
-        self.timer = Timer(0, self.queue_next_event)
+        self.timer = Timer(0, self._queue_next_event)
 
     def register_actuator(
         self, actuator: MDAActuator, n_channels: int = 1
     ) -> dict[str, Any]:
-        """Actuator asks for indices for example which channel to push to."""
+        """Actuator wants to register events in the future."""
         settings: dict[str, Any] = {}
         self._axis_max["c"] = self._axis_max.get("c", 0) + n_channels
         settings["channels"] = list(
@@ -104,7 +107,7 @@ class QueueManager:
         if event == self.event_queue.peak_next():
             self._reset_timer()
 
-    def queue_next_event(self) -> None:
+    def _queue_next_event(self) -> None:
         """Queue the next event."""
         eda_event = self.event_queue.get_next()
         if not eda_event:
@@ -149,7 +152,7 @@ class QueueManager:
                 + self.paused_time
             )
 
-        self.timer = Timer(max(relative_time, 0.0), self.queue_next_event)
+        self.timer = Timer(max(relative_time, 0.0), self._queue_next_event)
         self.timer.start()
 
     def toggle_pause(self, paused: bool) -> None:

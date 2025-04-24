@@ -8,14 +8,15 @@ import tensorstore as ts
 sys.path.append(str(Path(__file__).parent.parent))
 
 
+from pymmcore_plus import CMMCorePlus
+from useq import MDASequence
+
+from pymmcore_eda.actuator import MDAActuator
+from pymmcore_eda.queue_manager import QueueManager
+from pymmcore_eda.writer import AdaptiveWriter
+
+
 def test_mda():
-    from pymmcore_plus import CMMCorePlus
-    from useq import MDASequence
-
-    from pymmcore_eda.actuator import MDAActuator
-    from pymmcore_eda.queue_manager import QueueManager
-    from pymmcore_eda.writer import AdaptiveWriter
-
     mmc = CMMCorePlus()
     mmc.setDeviceAdapterSearchPaths(
         [
