@@ -75,7 +75,9 @@ class QueueManager:
         self.actuators[settings["id"]] = settings
         return settings
 
-    def prepare_event(self, event: MDAEvent | EDAEvent, actuator_id: str) -> EDAEvent:
+    def prepare_event(
+        self, event: MDAEvent | EDAEvent, actuator_id: str = "0"
+    ) -> EDAEvent:
         """Prepare an event for the queue."""
         if isinstance(event, MDAEvent):
             event = EDAEvent().from_mda_event(event, self.eda_sequence)
