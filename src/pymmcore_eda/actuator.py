@@ -26,13 +26,11 @@ class MDAActuator:
         self.thread = Thread(target=self._run)
 
         self.n_channels = mda_sequence.sizes.get("c", 1)
-        self.channels = self.queue_manager.register_actuator(self, self.n_channels)
+        self.settings = self.queue_manager.register_actuator(self, self.n_channels)
 
     def _run(self) -> None:
         for event in self.mda_sequence:
-            eda_event = EDAEvent().from_mda_event(event)
-            eda_event.reset_event_timer = False
-            self.queue_manager.register_event(eda_event)
+            self.queue_manager.register_event(event, self.settings.get("id", "0"))
         if self.wait:
             if event.min_start_time:
                 time.sleep(event.min_start_time + 3)

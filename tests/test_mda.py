@@ -21,7 +21,7 @@ def test_mda():
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False
 
-    queue_manager = QueueManager()
+    queue_manager = QueueManager(mmcore=mmc)
 
     mda_sequence = MDASequence(
         channels=["DAPI"],
@@ -30,7 +30,7 @@ def test_mda():
     base_actuator = MDAActuator(queue_manager, mda_sequence)
     base_actuator.wait = False
 
-    runner = MockRunner()
+    runner = MockRunner(time_machine=queue_manager.time_machine)
 
     runner.run(queue_manager.acq_queue_iterator)
     base_actuator.thread.start()

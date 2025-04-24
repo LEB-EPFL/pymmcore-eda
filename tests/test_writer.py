@@ -8,14 +8,15 @@ import tensorstore as ts
 sys.path.append(str(Path(__file__).parent.parent))
 
 
+from pymmcore_plus import CMMCorePlus
+from useq import MDASequence
+
+from pymmcore_eda.actuator import MDAActuator
+from pymmcore_eda.queue_manager import QueueManager
+from pymmcore_eda.writer import AdaptiveWriter
+
+
 def test_mda():
-    from pymmcore_plus import CMMCorePlus
-    from useq import MDASequence
-
-    from pymmcore_eda.actuator import MDAActuator
-    from pymmcore_eda.queue_manager import QueueManager
-    from pymmcore_eda.writer import AdaptiveWriter
-
     mmc = CMMCorePlus()
     mmc.setDeviceAdapterSearchPaths(
         [
@@ -27,7 +28,7 @@ def test_mda():
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False
 
-    queue_manager = QueueManager()
+    queue_manager = QueueManager(mmcore=mmc)
 
     mda_sequence = MDASequence(
         channels=["DAPI"],
@@ -41,8 +42,9 @@ def test_mda():
     mmc.run_mda(queue_manager.acq_queue_iterator, output=writer)
     base_actuator.thread.start()
     base_actuator.thread.join()
+    time.sleep(5)
     queue_manager.stop_seq()
-    time.sleep(3)
+    time.sleep(4)
     zarr_store = ts.open(
         {
             "driver": "zarr",

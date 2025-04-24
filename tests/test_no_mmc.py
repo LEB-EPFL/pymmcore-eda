@@ -1,10 +1,6 @@
-import sys
 import time
-from pathlib import Path
 
-sys.path.append(str(Path(__file__).parent.parent))
 from _runner import MockRunner
-from pymmcore_plus import CMMCorePlus
 from useq import Channel, MDASequence
 
 from pymmcore_eda._eda_event import EDAEvent
@@ -13,22 +9,31 @@ from pymmcore_eda.actuator import MDAActuator
 from pymmcore_eda.queue_manager import QueueManager
 
 
-def test_reset_event_timer():
-    """Test that the reset_event_timer on EDAEvent properly resets the timer."""
-    # Setup the core components
-    mmc = CMMCorePlus()
-    mmc.setDeviceAdapterSearchPaths(
-        [
-            "C:/Program Files/Micro-Manager-2.0/",
-            *list(mmc.getDeviceAdapterSearchPaths()),
-        ]
-    )
-    mmc.loadSystemConfiguration()
-    mmc.mda.engine.use_hardware_sequencing = False
+def test_mda_no_mmc():
+    queue_manager = QueueManager()
 
+    mda_sequence = MDASequence(
+        channels=["DAPI"],
+        time_plan={"interval": 0.5, "loops": 8},
+    )
+    base_actuator = MDAActuator(queue_manager, mda_sequence)
+    base_actuator.wait = False
+
+    runner = MockRunner(time_machine=queue_manager.time_machine)
+
+    runner.run(queue_manager.acq_queue_iterator)
+    base_actuator.thread.start()
+    base_actuator.thread.join()
+    time.sleep(8)
+    queue_manager.stop_seq()
+    assert len(runner.events) == 8
+    print(runner.events)
+
+
+def test_reset_no_mmc():
     # Create a sequence with multiple channels
     eda_sequence = EDASequence(channels=("DAPI", "Cy5"))
-    queue_manager = QueueManager(mmcore=mmc, eda_sequence=eda_sequence)
+    queue_manager = QueueManager(eda_sequence=eda_sequence)
     runner = MockRunner(time_machine=queue_manager.time_machine)
 
     runner.run(queue_manager.acq_queue_iterator)
@@ -104,4 +109,5 @@ def test_reset_event_timer():
 
 
 if __name__ == "__main__":
-    test_reset_event_timer()
+    # test_mda_no_mmc()
+    test_reset_no_mmc()

@@ -28,6 +28,6 @@ class TimeMachine:
         """Synced timer with the Runner in pymmcore-plus."""
         return time.perf_counter() - self._t0
 
-    def reset_timer(self) -> None:
+    def _reset_event_timer(self) -> None:
         """Reset the timer."""
         self._t0 = time.perf_counter()

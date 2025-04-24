@@ -67,6 +67,12 @@ class DynamicEventQueue:
                     self._unique_indexes["t"].remove(event.min_start_time)
                     self._t_index += 1
 
+    def clear(self) -> None:
+        """Clear the event queue."""
+        with self._lock:
+            self._events.clear()
+            self._events_by_time.clear()
+
     def _apply_sequence(self, sequence: EDASequence) -> None:
         """Apply the sequence to the event queue."""
         self.sequence = sequence

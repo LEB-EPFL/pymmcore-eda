@@ -25,8 +25,8 @@ def test_complex():
     mmc.mda.engine.use_hardware_sequencing = False
 
     eda_sequence = EDASequence(channels=("DAPI", "Cy5"))
-    queue_manager = QueueManager(eda_sequence=eda_sequence)
-    runner = MockRunner()
+    queue_manager = QueueManager(eda_sequence=eda_sequence, mmcore=mmc)
+    runner = MockRunner(time_machine=queue_manager.time_machine)
     runner.run(queue_manager.acq_queue_iterator)
 
     mda_sequence = MDASequence(
@@ -84,7 +84,9 @@ def test_complex():
     late_cy5_events = [
         e
         for e in runner.events
-        if e.channel.config == "Cy5" and e.min_start_time > 8 and e.min_start_time < 9
+        if e.channel.config == "Cy5"
+        and e.metadata["dynamic_start_time"] > 5
+        and e.metadata["dynamic_start_time"] < 5.5
     ]
     assert (
         len(late_cy5_events) == 3
@@ -101,9 +103,11 @@ def test_complex():
     # Check the sequential order of events with min_start_time
     for i in range(1, len(runner.events)):
         assert (
-            runner.events[i].min_start_time >= runner.events[i - 1].min_start_time
-        ), f"""Events out of order at index {i}: {runner.events[i - 1].min_start_time}
-        -> {runner.events[i].min_start_time}"""
+            runner.events[i].metadata["dynamic_start_time"]
+            >= runner.events[i - 1].metadata["dynamic_start_time"]
+        ), f"""Events out of order at index {i}:
+           {runner.events[i - 1].metadata['dynamic_start_time']}
+        -> {runner.events[i].metadata['dynamic_start_time']}"""
 
     print("All assertions passed!")
 
@@ -124,12 +128,9 @@ def test_edge_cases():
 
     # Create a sequence with multiple channels to test channel switching
     eda_sequence = EDASequence(channels=("DAPI", "FITC", "Cy5"))
-    queue_manager = QueueManager(eda_sequence=eda_sequence)
-    runner = MockRunner()
+    queue_manager = QueueManager(eda_sequence=eda_sequence, mmcore=mmc)
+    runner = MockRunner(time_machine=queue_manager.time_machine)
     runner.run(queue_manager.acq_queue_iterator)
-
-    # Wait for queue manager warmup (3 seconds)
-    time.sleep(3)
 
     # Edge case 1: Short sequence with rapid event registration
     mda_sequence = MDASequence(
@@ -169,7 +170,7 @@ def test_edge_cases():
         queue_manager.register_event(rapid_event)
 
     # Wait for all events to be executed (base sequence + buffer time)
-    time.sleep(5)
+    time.sleep(7)
 
     # Stop the sequence before the future event would execute
     queue_manager.stop_seq()
@@ -212,7 +213,9 @@ def test_edge_cases():
 
     # The future event should not be in the events list since we stopped before
     #  it would execute
-    future_events = [e for e in runner.events if e.min_start_time >= 100]
+    future_events = [
+        e for e in runner.events if e.metadata["dynamic_start_time"] >= 100
+    ]
     assert (
         len(future_events) == 0
     ), f"Expected 0 future events, got {len(future_events)}"
@@ -233,7 +236,9 @@ def test_edge_cases():
     ), f"Expected 10 unique rapid Cy5 events, got {len(cy5_unique_events)}"
 
     # Edge case 7: Test that events are ordered by min_start_time
-    sorted_events = sorted(runner.events, key=lambda e: e.min_start_time)
+    sorted_events = sorted(
+        runner.events, key=lambda e: e.metadata["dynamic_start_time"]
+    )
     assert runner.events == sorted_events, "Events should be ordered by min_start_time"
 
 

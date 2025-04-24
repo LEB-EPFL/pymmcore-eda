@@ -36,7 +36,7 @@ def test_mda():
     writer.reshape_on_finished = True
 
     EventHub(mmc.mda, writer)
-    queue_manager = QueueManager()
+    queue_manager = QueueManager(mmcore=mmc)
 
     mda_sequence = MDASequence(
         channels=(Channel(config="DAPI", exposure=100),),
@@ -48,9 +48,9 @@ def test_mda():
     ButtonActuator(queue_manager)
     mmc.run_mda(queue_manager.acq_queue_iterator, output=writer)
     base_actuator.thread.join()
+    time.sleep(2)
     queue_manager.stop_seq()
-    time.sleep(5)
-
+    time.sleep(1.5)
     zarr_store = ts.open(
         {
             "driver": "zarr",
