@@ -45,10 +45,7 @@ class DynamicEventQueue:
 
             self._events.add(event)
 
-            if (
-                event.min_start_time is not None
-                and event not in self._events_by_time[event.min_start_time]
-            ):
+            if event not in self._events_by_time[event.min_start_time]:
                 self._events_by_time[event.min_start_time].append(event)
                 self._update_unique_sets(event)
             else:
@@ -212,4 +209,4 @@ class DynamicEventQueue:
 
     def __len__(self) -> int:
         """Get the number of events in the queue."""
-        return len(self._events)
+        return len(tuple(self._events))

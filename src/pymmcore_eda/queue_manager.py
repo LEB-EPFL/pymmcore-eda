@@ -75,7 +75,9 @@ class QueueManager:
         self.actuators[settings["id"]] = settings
         return settings
 
-    def prepare_event(self, event: MDAEvent | EDAEvent, actuator_id: str) -> EDAEvent:
+    def prepare_event(
+        self, event: MDAEvent | EDAEvent, actuator_id: str = "0"
+    ) -> EDAEvent:
         """Prepare an event for the queue."""
         if isinstance(event, MDAEvent):
             event = EDAEvent().from_mda_event(event, self.eda_sequence)
@@ -142,6 +144,8 @@ class QueueManager:
             self.time_machine.consume_event(self.event_queue.peak_next())
 
         next_event = self.event_queue.peak_next()
+        if not next_event.min_start_time:
+            next_event.min_start_time = 0.0
         if next_event.reset_event_timer:
             relative_time = next_event.min_start_time + self.warmup
         else:
