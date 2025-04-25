@@ -6,6 +6,7 @@ from useq._actions import AcquireImage, AnyAction
 from useq._base_model import MutableModel
 
 from pymmcore_eda._eda_sequence import EDASequence
+from pymmcore_eda.helpers.function_helpers import dicts_equal, hash_dict
 
 try:
     from pydantic import field_serializer
@@ -224,6 +225,7 @@ class EDAEvent(MutableModel):
             and self.z_pos == other.z_pos
             and self.x_pos == other.x_pos
             and self.y_pos == other.y_pos
+            and dicts_equal(self.metadata, other.metadata)
         )
 
     def __hash__(self) -> int:
@@ -250,6 +252,7 @@ class EDAEvent(MutableModel):
                 if hasattr(self.action, "__hash__")
                 else id(self.action),
                 self.keep_shutter_open,
+                hash_dict(self.metadata),
             ]
         )
 

@@ -1,3 +1,7 @@
+import hashlib
+import json
+from typing import Any
+
 import numpy as np
 
 
@@ -68,3 +72,47 @@ def normalize_tilewise_vectorized(arr: np.ndarray, tile_size: int) -> np.ndarray
     normalized_array = normalized_tiles.transpose(0, 2, 1, 3).reshape(rows, cols)
 
     return normalized_array
+
+
+def dicts_equal(dict1: dict, dict2: dict) -> bool:
+    """Compare dictionaries by serializing them to JSON."""
+    try:
+        return json.dumps(dict1, sort_keys=True) == json.dumps(dict2, sort_keys=True)
+    except TypeError:
+        # If the dictionaries contain non-serializable objects (like NumPy arrays)
+        # we need a different approach
+        pass
+
+    # For dictionaries with NumPy arrays, we can use a specialized approach
+    import numpy as np
+
+    # Convert NumPy arrays to lists before serializing
+    def convert_numpy(obj: Any) -> Any:
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, dict):
+            return {k: convert_numpy(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [convert_numpy(item) for item in obj]
+        return obj
+
+    dict1_converted = convert_numpy(dict1)
+    dict2_converted = convert_numpy(dict2)
+
+    return json.dumps(dict1_converted, sort_keys=True) == json.dumps(
+        dict2_converted, sort_keys=True
+    )
+
+
+def hash_dict(d: dict) -> str:
+    """Generate a hash for a dictionary, including NumPy arrays."""
+    d_copy = d.copy()
+
+    # Convert any NumPy arrays to a hashable representation
+    for key, value in d_copy.items():
+        if isinstance(value, np.ndarray):
+            d_copy[key] = (value.tobytes(), value.shape, value.dtype.str)
+
+    sorted_items = sorted(d_copy.items())
+    dict_str = json.dumps(sorted_items, sort_keys=True, default=str)
+    return hashlib.md5(dict_str.encode()).hexdigest()

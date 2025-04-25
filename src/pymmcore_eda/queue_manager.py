@@ -144,6 +144,8 @@ class QueueManager:
             self.time_machine.consume_event(self.event_queue.peak_next())
 
         next_event = self.event_queue.peak_next()
+        if not next_event.min_start_time:
+            next_event.min_start_time = 0.0
         if next_event.reset_event_timer:
             relative_time = next_event.min_start_time + self.warmup
         else:
