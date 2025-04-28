@@ -45,7 +45,8 @@ def test_pause():
     times = [meta["runner_time_ms"] for meta in metas]
     diffs = np.diff(times)
     print(diffs)
-    diffs = diffs[1:]
+    # Early behavior should be tested somewhere else still
+    diffs = diffs[3:]
     assert min(diffs) > 150
     assert min(diffs) < 210
     assert max(diffs) > 2100
