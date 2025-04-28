@@ -8,39 +8,38 @@ from pymmcore_eda.actuator import MDAActuator
 from pymmcore_eda.queue_manager import QueueManager
 
 mmc = CMMCorePlus()
-mmc.setDeviceAdapterSearchPaths(
-    [
-        "C:/Program Files/Micro-Manager-2.0/",
-        *list(mmc.getDeviceAdapterSearchPaths()),
-    ]
-)
-mmc.loadSystemConfiguration()
+try:
+    mmc.setDeviceAdapterSearchPaths(["C:/Users/stepp/AppData/Local/pymmcore-plus/pymmcore-plus/mm/Micro-Manager_2.0.3_20240618"])
+    mmc.loadSystemConfiguration("C:/Control_2/240715_ZeissAxioObserver7.cfg")
+    MY_CHANNELS = ("Brightfield", "Cy5 (635nm)", "GFP (470nm)")
+except OSError:
+    mmc.loadSystemConfiguration()
+    MY_CHANNELS = ("Cy5", "DAPI", "FITC")
+print("Loaded system configuration")
 mmc.mda.engine.use_hardware_sequencing = False
 
 eda_sequence = EDASequence()
-queue_manager = QueueManager(eda_sequence=eda_sequence)
+queue_manager = QueueManager(eda_sequence=eda_sequence, mmcore=mmc)
+queue_manager.warmup = 3
 
 mda_sequence = MDASequence(
-    channels=["DAPI"],
-    time_plan={"interval": 1, "loops": 3},
+    channels=[MY_CHANNELS[1]],
+    time_plan={"interval": 1, "loops": 5},
 )
 base_actuator = MDAActuator(queue_manager, mda_sequence)
 base_actuator.wait = False
 
 mda_sequence2 = MDASequence(
-    channels=["Cy5"],
-    time_plan={"interval": 1, "loops": 3},
+    channels=[MY_CHANNELS[0]],
+    time_plan={"interval": 1, "loops": 5},
 )
 base_actuator2 = MDAActuator(queue_manager, mda_sequence2)
 base_actuator2.wait = False
 
-
 base_actuator2.thread.start()
-time.sleep(1)
 base_actuator.thread.start()
-time.sleep(1)
 
 mmc.run_mda(queue_manager.acq_queue_iterator)
-time.sleep(7)
+time.sleep(15)
 queue_manager.stop_seq()
 time.sleep(1)
