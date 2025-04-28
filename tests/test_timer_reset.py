@@ -17,12 +17,6 @@ def test_reset_event_timer():
     """Test that the reset_event_timer on EDAEvent properly resets the timer."""
     # Setup the core components
     mmc = CMMCorePlus()
-    mmc.setDeviceAdapterSearchPaths(
-        [
-            "C:/Program Files/Micro-Manager-2.0/",
-            *list(mmc.getDeviceAdapterSearchPaths()),
-        ]
-    )
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False
 

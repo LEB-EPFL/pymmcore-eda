@@ -10,13 +10,6 @@ from pymmcore_eda.queue_manager import QueueManager
 
 def test_pause():
     mmc = CMMCorePlus()
-    mmc.setDeviceAdapterSearchPaths(
-        [
-            "C:/Program Files/Micro-Manager-2.0/",
-            "/opt/micro-manager",
-            *list(mmc.getDeviceAdapterSearchPaths()),
-        ]
-    )
     mmc.loadSystemConfiguration("MMConfig_demo.cfg")
     mmc.mda.engine.use_hardware_sequencing = False
 
@@ -61,13 +54,6 @@ def test_pause():
 
 def test_cancel():
     mmc = CMMCorePlus()
-    mmc.setDeviceAdapterSearchPaths(
-        [
-            "C:/Program Files/Micro-Manager-2.0/",
-            "/opt/micro-manager",
-            *list(mmc.getDeviceAdapterSearchPaths()),
-        ]
-    )
     mmc.loadSystemConfiguration("MMConfig_demo.cfg")
     mmc.mda.engine.use_hardware_sequencing = False
 

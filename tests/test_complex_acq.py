@@ -15,12 +15,6 @@ from pymmcore_eda.queue_manager import QueueManager
 
 def test_complex():
     mmc = CMMCorePlus()
-    mmc.setDeviceAdapterSearchPaths(
-        [
-            "C:/Program Files/Micro-Manager-2.0/",
-            *list(mmc.getDeviceAdapterSearchPaths()),
-        ]
-    )
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False
 
@@ -106,8 +100,8 @@ def test_complex():
             runner.events[i].metadata["dynamic_start_time"]
             >= runner.events[i - 1].metadata["dynamic_start_time"]
         ), f"""Events out of order at index {i}:
-           {runner.events[i - 1].metadata['dynamic_start_time']}
-        -> {runner.events[i].metadata['dynamic_start_time']}"""
+           {runner.events[i - 1].metadata["dynamic_start_time"]}
+        -> {runner.events[i].metadata["dynamic_start_time"]}"""
 
     print("All assertions passed!")
 
@@ -117,12 +111,6 @@ def test_edge_cases():
     considering events are unique in a set."""
     # Setup the core components
     mmc = CMMCorePlus()
-    mmc.setDeviceAdapterSearchPaths(
-        [
-            "C:/Program Files/Micro-Manager-2.0/",
-            *list(mmc.getDeviceAdapterSearchPaths()),
-        ]
-    )
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False
 

@@ -11,13 +11,6 @@ def test_mda():
     from pymmcore_eda.queue_manager import QueueManager
 
     mmc = CMMCorePlus()
-    mmc.setDeviceAdapterSearchPaths(
-        [
-            "C:/Program Files/Micro-Manager-2.0/",
-            "/opt/micro-manager",
-            *list(mmc.getDeviceAdapterSearchPaths()),
-        ]
-    )
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False
 

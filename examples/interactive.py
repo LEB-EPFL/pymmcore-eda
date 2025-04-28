@@ -12,7 +12,11 @@ from pymmcore_eda.queue_manager import QueueManager
 # Initialize CMMCorePlus
 mmc = CMMCorePlus()
 try:
-    mmc.setDeviceAdapterSearchPaths(["C:/Users/stepp/AppData/Local/pymmcore-plus/pymmcore-plus/mm/Micro-Manager_2.0.3_20240618"])
+    mmc.setDeviceAdapterSearchPaths(
+        [
+            "C:/Users/stepp/AppData/Local/pymmcore-plus/pymmcore-plus/mm/Micro-Manager_2.0.3_20240618"
+        ]
+    )
     mmc.loadSystemConfiguration("C:/Control_2/240715_ZeissAxioObserver7.cfg")
     MY_CHANNELS = ("Brightfield", "Cy5 (635nm)", "GFP (470nm)")
 except OSError:
@@ -65,8 +69,6 @@ print("Starting acquisition sequence...")
 # Start acquisition with hooks
 try:
     # Start the base actuator
-    mmc.mda._reset_event_timer()  # noqa: SLF001
-    queue_manager.time_machine._reset_event_timer()
     mmc.run_mda(queue_manager.acq_queue_iterator)
 
     # Wait for completion with timeout

@@ -9,7 +9,11 @@ from pymmcore_eda.queue_manager import QueueManager
 
 mmc = CMMCorePlus()
 try:
-    mmc.setDeviceAdapterSearchPaths(["C:/Users/stepp/AppData/Local/pymmcore-plus/pymmcore-plus/mm/Micro-Manager_2.0.3_20240618"])
+    mmc.setDeviceAdapterSearchPaths(
+        [
+            "C:/Users/stepp/AppData/Local/pymmcore-plus/pymmcore-plus/mm/Micro-Manager_2.0.3_20240618"
+        ]
+    )
     mmc.loadSystemConfiguration("C:/Control_2/240715_ZeissAxioObserver7.cfg")
     MY_CHANNELS = ("Brightfield", "Cy5 (635nm)", "GFP (470nm)")
 except OSError:

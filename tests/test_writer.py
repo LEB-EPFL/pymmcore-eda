@@ -18,13 +18,6 @@ from pymmcore_eda.writer import AdaptiveWriter
 
 def test_mda():
     mmc = CMMCorePlus()
-    mmc.setDeviceAdapterSearchPaths(
-        [
-            "C:/Program Files/Micro-Manager-2.0/",
-            "/opt/micro-manager/lib/micro-manager",
-            *list(mmc.getDeviceAdapterSearchPaths()),
-        ]
-    )
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False
 

@@ -12,12 +12,6 @@ def test_actuator_reg():
     from pymmcore_eda.queue_manager import QueueManager
 
     mmc = CMMCorePlus()
-    mmc.setDeviceAdapterSearchPaths(
-        [
-            "C:/Program Files/Micro-Manager-2.0/",
-            *list(mmc.getDeviceAdapterSearchPaths()),
-        ]
-    )
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False
 
@@ -64,12 +58,6 @@ def test_double_reg():
     from pymmcore_eda.queue_manager import QueueManager
 
     mmc = CMMCorePlus()
-    mmc.setDeviceAdapterSearchPaths(
-        [
-            "C:/Program Files/Micro-Manager-2.0/",
-            *list(mmc.getDeviceAdapterSearchPaths()),
-        ]
-    )
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False
 

@@ -1,14 +1,9 @@
+import logging
 import time
 
-
-
 from pymmcore_plus import CMMCorePlus
-from useq import Channel, MDASequence
-import logging
 from pymmcore_plus._logger import logger
-for handler in list(logger.handlers):
-    if isinstance(handler, logging.handlers.RotatingFileHandler):
-        logger.removeHandler(handler)
+from useq import Channel, MDASequence
 
 from pymmcore_eda._eda_sequence import EDASequence
 from pymmcore_eda.actuator import Actuator, MDAActuator
@@ -16,9 +11,18 @@ from pymmcore_eda.analyser import Analyser
 from pymmcore_eda.event_hub import EventHub
 from pymmcore_eda.interpreter import Interpreter
 from pymmcore_eda.queue_manager import QueueManager
+
+for handler in list(logger.handlers):
+    if isinstance(handler, logging.handlers.RotatingFileHandler):
+        logger.removeHandler(handler)
+
 mmc = CMMCorePlus()
 try:
-    mmc.setDeviceAdapterSearchPaths(["C:/Users/stepp/AppData/Local/pymmcore-plus/pymmcore-plus/mm/Micro-Manager_2.0.3_20240618"])
+    mmc.setDeviceAdapterSearchPaths(
+        [
+            "C:/Users/stepp/AppData/Local/pymmcore-plus/pymmcore-plus/mm/Micro-Manager_2.0.3_20240618"
+        ]
+    )
     mmc.loadSystemConfiguration("C:/Control_2/240715_ZeissAxioObserver7.cfg")
     MY_CHANNELS = ("Brightfield", "Cy5 (635nm)", "GFP (470nm)")
 except OSError:
