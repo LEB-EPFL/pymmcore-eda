@@ -1,15 +1,14 @@
 import time
 
 from _runner import MockRunner
+from pymmcore_plus import CMMCorePlus
+from useq import MDASequence
+
+from pymmcore_eda.actuator import MDAActuator
+from pymmcore_eda.queue_manager import QueueManager
 
 
 def test_mda():
-    from pymmcore_plus import CMMCorePlus
-    from useq import MDASequence
-
-    from pymmcore_eda.actuator import MDAActuator
-    from pymmcore_eda.queue_manager import QueueManager
-
     mmc = CMMCorePlus()
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False

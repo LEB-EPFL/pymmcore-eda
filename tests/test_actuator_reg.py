@@ -1,16 +1,15 @@
 import time
 
 from _runner import MockRunner
+from pymmcore_plus import CMMCorePlus
+from useq import MDASequence
+
+from pymmcore_eda._eda_sequence import EDASequence
+from pymmcore_eda.actuator import MDAActuator
+from pymmcore_eda.queue_manager import QueueManager
 
 
 def test_actuator_reg():
-    from pymmcore_plus import CMMCorePlus
-    from useq import MDASequence
-
-    from pymmcore_eda._eda_sequence import EDASequence
-    from pymmcore_eda.actuator import MDAActuator
-    from pymmcore_eda.queue_manager import QueueManager
-
     mmc = CMMCorePlus()
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False
@@ -50,13 +49,6 @@ def test_actuator_reg():
 
 
 def test_double_reg():
-    from pymmcore_plus import CMMCorePlus
-    from useq import MDASequence
-
-    from pymmcore_eda._eda_sequence import EDASequence
-    from pymmcore_eda.actuator import MDAActuator
-    from pymmcore_eda.queue_manager import QueueManager
-
     mmc = CMMCorePlus()
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False

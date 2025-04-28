@@ -4,19 +4,18 @@ import time
 from pathlib import Path
 
 import tensorstore as ts
+from pymmcore_plus import CMMCorePlus
+from useq import Channel, MDASequence
+
+from pymmcore_eda.actuator import ButtonActuator, MDAActuator
+from pymmcore_eda.event_hub import EventHub
+from pymmcore_eda.queue_manager import QueueManager
+from pymmcore_eda.writer import AdaptiveWriter
 
 sys.path.append(str(Path(__file__).parent.parent))
 
 
 def test_mda():
-    from pymmcore_plus import CMMCorePlus
-    from useq import Channel, MDASequence
-
-    from pymmcore_eda.actuator import ButtonActuator, MDAActuator
-    from pymmcore_eda.event_hub import EventHub
-    from pymmcore_eda.queue_manager import QueueManager
-    from pymmcore_eda.writer import AdaptiveWriter
-
     mmc = CMMCorePlus()
     mmc.loadSystemConfiguration()
     mmc.mda.engine.use_hardware_sequencing = False
