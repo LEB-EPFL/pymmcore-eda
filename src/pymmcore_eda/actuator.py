@@ -53,11 +53,12 @@ class Actuator:
         self.hub.new_interpretation.connect(self._act)
         self.n_events = n_events
         self.skip_frames = skip_frames
+        self.channel_name = "FITC"
 
     def _act(self, _: Any, event: MDAEvent, __: Any) -> None:
         for i in range(0, self.n_events):
             curr_event = EDAEvent(
-                channel="FITC",
+                channel=self.channel_name,
                 attach_index={"t": i},
             )
             self.queue_manager.register_event(curr_event)

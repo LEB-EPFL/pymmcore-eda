@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 class InterpreterSettings:
     """Settings for the Interpreter."""
 
-    threshold: float = 1
+    threshold: float = 0.5
 
 
 class Interpreter:
@@ -28,9 +28,9 @@ class Interpreter:
         mask = net_out > InterpreterSettings.threshold
 
         # ensure a smart event every smart_event_period frames
-        t = event.index.get("t", 0)
-        if self.smart_event_period > 0 and t % self.smart_event_period == 0:
-            mask[50:150, 50:150] = 1
+        # t = event.index.get("t", 0)
+        # if self.smart_event_period > 0 and t % self.smart_event_period == 0:
+        #     mask[50:150, 50:150] = 1
 
         # Emit the interpretation result only if not empty
         if np.sum(mask) != 0:
