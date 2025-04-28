@@ -11,17 +11,24 @@ from pymmcore_eda.queue_manager import QueueManager
 
 # Initialize CMMCorePlus
 mmc = CMMCorePlus()
-mmc.loadSystemConfiguration()
-mmc.mda.engine.use_hardware_sequencing = False
+try:
+    mmc.setDeviceAdapterSearchPaths(["C:/Users/stepp/AppData/Local/pymmcore-plus/pymmcore-plus/mm/Micro-Manager_2.0.3_20240618"])
+    mmc.loadSystemConfiguration("C:/Control_2/240715_ZeissAxioObserver7.cfg")
+    MY_CHANNELS = ("Brightfield", "Cy5 (635nm)", "GFP (470nm)")
+except OSError:
+    mmc.loadSystemConfiguration()
+    MY_CHANNELS = ("Cy5", "DAPI", "FITC")
 print("Loaded system configuration")
 
+
+mmc.mda.engine.use_hardware_sequencing = False
 event_hub = EventHub(mmc.mda)
-eda_sequence = EDASequence(channels=("Cy5", "DAPI", "FITC"))
-queue_manager = QueueManager(eda_sequence=eda_sequence)
+eda_sequence = EDASequence(channels=MY_CHANNELS)
+queue_manager = QueueManager(eda_sequence=eda_sequence, mmcore=mmc)
 
 # Create an MDA sequence with a Cy5 channel and time plan
 mda_sequence = MDASequence(
-    channels=(Channel(config="Cy5", exposure=100),),
+    channels=(Channel(config=MY_CHANNELS[0], exposure=100),),
     time_plan={"interval": 1, "loops": 30},
 )
 
@@ -33,24 +40,25 @@ time.sleep(1)
 
 
 # Register various EDA events
-event1 = EDAEvent(attach_index={"t": 2}, channel="DAPI")
+event1 = EDAEvent(attach_index={"t": 2}, channel=MY_CHANNELS[1])
 queue_manager.register_event(event1)
 
-event2 = EDAEvent(min_start_time=-4, channel="DAPI")
+event2 = EDAEvent(min_start_time=-4, channel=MY_CHANNELS[1])
 queue_manager.register_event(event2)
 
-event3 = EDAEvent(attach_index={"t": 2}, channel="DAPI")
+event3 = EDAEvent(attach_index={"t": 2}, channel=MY_CHANNELS[1])
 queue_manager.register_event(event3)
 
-event4 = EDAEvent(min_start_time=-5.0, channel="Cy5")
-event5 = EDAEvent(min_start_time=-5.1, channel="Cy5")
-event6 = EDAEvent(min_start_time=-5.2, channel="Cy5")
+event4 = EDAEvent(min_start_time=-5.0, channel=MY_CHANNELS[0])
+event5 = EDAEvent(min_start_time=-5.1, channel=MY_CHANNELS[0])
+event6 = EDAEvent(min_start_time=-5.2, channel=MY_CHANNELS[0])
 
 for evt in (event4, event5, event6):
     queue_manager.register_event(evt)
 
 
 button_actuator = ButtonActuator(queue_manager)
+button_actuator.channel_name = MY_CHANNELS[2]
 button_actuator.thread.start()
 print("Starting acquisition sequence...")
 
@@ -58,7 +66,7 @@ print("Starting acquisition sequence...")
 try:
     # Start the base actuator
     mmc.mda._reset_event_timer()  # noqa: SLF001
-    queue_manager.time_machine.reset_timer()
+    queue_manager.time_machine._reset_event_timer()
     mmc.run_mda(queue_manager.acq_queue_iterator)
 
     # Wait for completion with timeout

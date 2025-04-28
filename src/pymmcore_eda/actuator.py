@@ -73,6 +73,7 @@ class ButtonActuator:
     def __init__(self, queue_manager: QueueManager):
         self.queue_manager = queue_manager
         self.thread = Thread(target=self._run)
+        self.channel_name = "FITC"
 
     def _run(self) -> None:
         while True:
@@ -80,7 +81,7 @@ class ButtonActuator:
             if button == "q":
                 break
             event = EDAEvent(
-                channel="FITC",
+                channel=self.channel_name,
                 attach_index={"t": 0},
             )
             self.queue_manager.register_event(event)
