@@ -42,7 +42,7 @@ def test_mda():
     base_actuator.thread.join()
     time.sleep(2)
     queue_manager.stop_seq()
-    time.sleep(1.5)
+    time.sleep(3)
     zarr_store = ts.open(
         {
             "driver": "zarr",
