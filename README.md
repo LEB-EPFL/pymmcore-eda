@@ -43,3 +43,6 @@ Examples of how the loop can be closed for smart acquisitions
 
 ## AdaptiveWriter
 Writer based on the TensorstoreWriter in pymmcore-plus with additional functionality to work better for adaptive acquisitions that don't have a predefined size etc.
+
+## Related
+The development of this integrated package was preceded by the original implementation of the Micro-Manager plugin for EDA [eda-plugin](https://github.com/LEB-EPFL/eda_plugin) and a specialised rescan approach in collaboration with IMCF at University of Basel (imcf-eda)[https://github.com/wl-stepp/imcf_eda].
