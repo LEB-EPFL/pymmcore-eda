@@ -44,6 +44,9 @@ Source = "https://github.com/LEB-EPFL/pymmcore-eda"
 Tracker = "https://github.com/LEB-EPFL/pymmcore-eda/issues"
 Documentation = "https://LEB-EPFL.github.io/pymmcore-eda"
 
+[tool.setuptools.dynamic]
+version = {attr = "pymmcore_eda.__version__"}
+
 [tool.pytest.ini_options]
 log_cli = true
 log_cli_level = "INFO"
