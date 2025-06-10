@@ -63,6 +63,8 @@ class DynamicEventQueue:
                     del self._events_by_time[event.min_start_time]
                     self._unique_indexes["t"].remove(event.min_start_time)
                     self._t_index += 1
+            else:
+                self._t_index += 1
 
     def clear(self) -> None:
         """Clear the event queue."""
@@ -120,7 +122,6 @@ class DynamicEventQueue:
         """Get the next event from the queue (first in order)."""
         if len(self._events) == 0:
             return None
-
         event = self._events.pop(0)
         # Generate and assign integer indexes before returning the event
         event = self._assign_integer_indexes(event)
@@ -133,9 +134,10 @@ class DynamicEventQueue:
             return None
 
         event = self._events[0]
-        # Generate and assign integer indexes before returning the event
-        event = self._assign_integer_indexes(event)
-        return event
+        # Generate and assign integer indexes before returning a copy of the event
+        event_copy = event.model_copy()
+        event_copy = self._assign_integer_indexes(event_copy)
+        return event_copy
 
     def _assign_integer_indexes(self, event: EDAEvent) -> EDAEvent:
         """Assign integer indexes to the event based on its dimension values."""
@@ -167,9 +169,8 @@ class DynamicEventQueue:
                 index["g"] = grid_index
 
         # Assign time index if available
-        if event.min_start_time is not None:
-            time_index = self._t_index
-            index["t"] = time_index
+        time_index = self._t_index
+        index["t"] = time_index
 
         # Attach the index to the event
         event.index = index

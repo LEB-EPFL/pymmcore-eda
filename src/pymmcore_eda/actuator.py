@@ -80,6 +80,8 @@ class ButtonActuator:
         while True:
             button = input()
             if button == "q":
+                print('button actuator stopped')
+                self.queue_manager.stop_seq()
                 break
             event = EDAEvent(
                 channel=self.channel_name,
