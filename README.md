@@ -3,9 +3,9 @@ Run dynamic microscope acquisitions on the [pymmcore-plus](https://pymmcore-plus
 
 # Dynamic Acquisitions
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./QueueManager-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="./QueueManager-light.png">
-  <img alt="Project Screenshot" src="./QueueManager-dark.png">
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/QueueManager-dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="./docs/QueueManager-light.png">
+  <img alt="Project Screenshot" src="./docs/QueueManager-dark.png">
 </picture>
 
 
@@ -44,5 +44,12 @@ Examples of how the loop can be closed for smart acquisitions
 ## AdaptiveWriter
 Writer based on the TensorstoreWriter in pymmcore-plus with additional functionality to work better for adaptive acquisitions that don't have a predefined size etc.
 
-## Related
+## Other
+### Limitations
+There are some limitations with this approach, like the incompatibility with at least some forms of hardware sequencing. See [limitations](./docs/limitations.md).
+
+### Structure
+For more detail on the Structure see [this](./docs/structure.md)
+
+### Related
 The development of this integrated package was preceded by the original implementation of the Micro-Manager plugin for EDA [eda-plugin](https://github.com/LEB-EPFL/eda_plugin) and a specialised rescan approach in collaboration with IMCF at University of Basel [imcf-eda](https://github.com/wl-stepp/imcf_eda).
